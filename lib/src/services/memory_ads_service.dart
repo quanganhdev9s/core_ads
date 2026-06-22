@@ -1,6 +1,6 @@
+import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/enums/ad_load_status.dart';
-import '../core/enums/ad_type.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
@@ -15,7 +15,8 @@ class MemoryAdsService implements AdsService {
   /// Creates an in-memory ads service.
   MemoryAdsService();
 
-  final Map<AdType, AdLoadStatus> _statuses = <AdType, AdLoadStatus>{};
+  final Map<AdPlacement, AdLoadStatus> _statuses =
+      <AdPlacement, AdLoadStatus>{};
 
   AdsLogger _logger = const AdsLogger(enabled: false);
   bool _isInitialized = false;
@@ -30,7 +31,7 @@ class MemoryAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> load(AdType type) async {
+  Future<AdResult<void>> load(AdPlacement placement) async {
     if (!_isInitialized) {
       return const AdResult.failure(
         AdFailure(
@@ -40,14 +41,14 @@ class MemoryAdsService implements AdsService {
       );
     }
 
-    _statuses[type] = AdLoadStatus.ready;
-    _logger.log('${type.name} marked ready');
+    _statuses[placement] = AdLoadStatus.ready;
+    _logger.log('${placement.key} marked ready');
 
     return const AdResult.success(null);
   }
 
   @override
-  Future<AdResult<void>> show(AdType type) async {
+  Future<AdResult<void>> show(AdPlacement placement) async {
     if (!_isInitialized) {
       return const AdResult.failure(
         AdFailure(
@@ -57,22 +58,23 @@ class MemoryAdsService implements AdsService {
       );
     }
 
-    if (_statuses[type] != AdLoadStatus.ready) {
-      _logger.log('${type.name} is not ready');
+    if (_statuses[placement] != AdLoadStatus.ready) {
+      _logger.log('${placement.key} is not ready');
       return const AdResult.failure(AdFailure.notReady());
     }
 
-    _statuses[type] = AdLoadStatus.shown;
-    _logger.log('${type.name} shown by memory service');
+    _statuses[placement] = AdLoadStatus.shown;
+    _logger.log('${placement.key} shown by memory service');
 
     return const AdResult.success(null);
   }
 
   @override
   Future<AdResult<void>> showRewarded({
+    required AdPlacement placement,
     required void Function() onRewardEarned,
   }) async {
-    final result = await show(AdType.rewarded);
+    final result = await show(placement);
     if (result.isSuccess) {
       onRewardEarned();
     }

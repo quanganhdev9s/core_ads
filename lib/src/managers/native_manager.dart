@@ -1,5 +1,5 @@
+import '../core/config/ad_placement.dart';
 import '../core/enums/ad_load_status.dart';
-import '../core/enums/ad_type.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../services/ads_service.dart';
@@ -9,10 +9,15 @@ import 'consent_manager.dart';
 /// Manages native ad loading and cache state.
 class NativeManager implements AdManager {
   /// Creates a native ad manager.
-  NativeManager({required this.service, required this.consentManager});
+  NativeManager({
+    required this.service,
+    required this.consentManager,
+    required this.placement,
+  });
 
   final AdsService service;
   final ConsentManager consentManager;
+  final AdPlacement placement;
 
   AdLoadStatus _status = AdLoadStatus.idle;
 
@@ -34,7 +39,7 @@ class NativeManager implements AdManager {
     }
 
     _status = AdLoadStatus.loading;
-    final result = await service.load(AdType.native);
+    final result = await service.load(placement);
     _status = result.isSuccess ? AdLoadStatus.ready : AdLoadStatus.failed;
 
     return result;

@@ -1,11 +1,11 @@
 import 'core/config/ads_config.dart';
-import 'core/enums/ad_type.dart';
+import 'core/config/ad_placement.dart';
 import 'core/results/ad_failure.dart';
 import 'core/results/ad_result.dart';
 import 'data/repositories/ads_repository_impl.dart';
 import 'domain/repositories/ads_repository.dart';
 import 'services/ads_service.dart';
-import 'services/memory_ads_service.dart';
+import 'services/google_ads_service.dart';
 
 /// Public entry-point used by applications to interact with ads.
 class FlutterAds {
@@ -29,27 +29,28 @@ class FlutterAds {
 
     _repository = AdsRepositoryImpl(
       config: config,
-      service: service ?? MemoryAdsService(),
+      service: service ?? GoogleAdsService(),
     );
 
     return _repository!.initialize();
   }
 
-  /// Shows an interstitial ad if one is ready.
-  static Future<AdResult<void>> showInterstitial() {
+  /// Shows an interstitial ad for [placement] if one is ready.
+  static Future<AdResult<void>> showInterstitial(AdPlacement placement) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.showInterstitial();
+    return repository.showInterstitial(placement);
   }
 
-  /// Shows a rewarded ad if one is ready.
+  /// Shows a rewarded ad for [placement] if one is ready.
   ///
   /// [onRewardEarned] is called only after the underlying ad network confirms
   /// the user earned the reward.
   static Future<AdResult<void>> showRewarded({
+    required AdPlacement placement,
     required void Function() onRewardEarned,
   }) {
     final repository = _repository;
@@ -57,29 +58,32 @@ class FlutterAds {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.showRewarded(onRewardEarned: onRewardEarned);
+    return repository.showRewarded(
+      placement: placement,
+      onRewardEarned: onRewardEarned,
+    );
   }
 
-  /// Shows an app open ad if one is ready and valid.
-  static Future<AdResult<void>> showAppOpen() {
+  /// Shows an app open ad for [placement] if one is ready and valid.
+  static Future<AdResult<void>> showAppOpen(AdPlacement placement) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.showAppOpen();
+    return repository.showAppOpen(placement);
   }
 
-  /// Requests loading an ad for [type].
+  /// Requests loading an ad for [placement].
   ///
   /// This is mainly useful for explicit preloading in advanced flows.
-  static Future<AdResult<void>> load(AdType type) {
+  static Future<AdResult<void>> load(AdPlacement placement) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.load(type);
+    return repository.load(placement);
   }
 
   /// Disposes ads resources.

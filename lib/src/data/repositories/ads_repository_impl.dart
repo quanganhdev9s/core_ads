@@ -1,3 +1,4 @@
+import '../../core/config/ad_placement.dart';
 import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
 import '../../core/results/ad_failure.dart';
@@ -14,65 +15,11 @@ import '../../services/ads_service.dart';
 /// Default repository that coordinates app calls with ad managers.
 class AdsRepositoryImpl implements AdsRepository {
   /// Creates an ads repository.
-  factory AdsRepositoryImpl({
-    required AdsConfig config,
-    required AdsService service,
-    ConsentManager? consentManager,
-    BannerManager? bannerManager,
-    InterstitialManager? interstitialManager,
-    RewardManager? rewardManager,
-    AppOpenManager? appOpenManager,
-    NativeManager? nativeManager,
-  }) {
-    final resolvedConsentManager = consentManager ?? ConsentManager();
-
-    return AdsRepositoryImpl._(
-      config: config,
-      service: service,
-      consentManager: resolvedConsentManager,
-      bannerManager:
-          bannerManager ??
-          BannerManager(
-            service: service,
-            consentManager: resolvedConsentManager,
-          ),
-      interstitialManager:
-          interstitialManager ??
-          InterstitialManager(
-            service: service,
-            consentManager: resolvedConsentManager,
-          ),
-      rewardManager:
-          rewardManager ??
-          RewardManager(
-            service: service,
-            consentManager: resolvedConsentManager,
-          ),
-      appOpenManager:
-          appOpenManager ??
-          AppOpenManager(
-            service: service,
-            consentManager: resolvedConsentManager,
-          ),
-      nativeManager:
-          nativeManager ??
-          NativeManager(
-            service: service,
-            consentManager: resolvedConsentManager,
-          ),
-    );
-  }
-
-  const AdsRepositoryImpl._({
+  AdsRepositoryImpl({
     required this.config,
     required this.service,
-    required this.consentManager,
-    required this.bannerManager,
-    required this.interstitialManager,
-    required this.rewardManager,
-    required this.appOpenManager,
-    required this.nativeManager,
-  });
+    ConsentManager? consentManager,
+  }) : consentManager = consentManager ?? ConsentManager();
 
   /// Runtime ads configuration.
   final AdsConfig config;
@@ -83,20 +30,11 @@ class AdsRepositoryImpl implements AdsRepository {
   /// Consent lifecycle manager.
   final ConsentManager consentManager;
 
-  /// Banner lifecycle manager.
-  final BannerManager bannerManager;
-
-  /// Interstitial lifecycle manager.
-  final InterstitialManager interstitialManager;
-
-  /// Rewarded lifecycle manager.
-  final RewardManager rewardManager;
-
-  /// App open lifecycle manager.
-  final AppOpenManager appOpenManager;
-
-  /// Native lifecycle manager.
-  final NativeManager nativeManager;
+  final Map<AdPlacement, BannerManager> _bannerManagers = {};
+  final Map<AdPlacement, InterstitialManager> _interstitialManagers = {};
+  final Map<AdPlacement, RewardManager> _rewardManagers = {};
+  final Map<AdPlacement, AppOpenManager> _appOpenManagers = {};
+  final Map<AdPlacement, NativeManager> _nativeManagers = {};
 
   @override
   Future<AdResult<void>> initialize() async {
@@ -110,19 +48,15 @@ class AdsRepositoryImpl implements AdsRepository {
       return initializeResult;
     }
 
-    await interstitialManager.load();
-    await rewardManager.load();
-    await appOpenManager.load();
-
     return const AdResult.success(null);
   }
 
   @override
-  Future<AdResult<void>> load(AdType type) {
-    return switch (type) {
-      AdType.banner => bannerManager.load(),
-      AdType.interstitial => interstitialManager.load(),
-      AdType.rewarded => rewardManager.load(),
+  Future<AdResult<void>> load(AdPlacement placement) {
+    return switch (placement.type) {
+      AdType.banner => _bannerManager(placement).load(),
+      AdType.interstitial => _interstitialManager(placement).load(),
+      AdType.rewarded => _rewardManager(placement).load(),
       AdType.rewardedInterstitial => Future.value(
         const AdResult.failure(
           AdFailure(
@@ -131,35 +65,126 @@ class AdsRepositoryImpl implements AdsRepository {
           ),
         ),
       ),
-      AdType.native => nativeManager.load(),
-      AdType.appOpen => appOpenManager.load(),
+      AdType.native => _nativeManager(placement).load(),
+      AdType.appOpen => _appOpenManager(placement).load(),
     };
   }
 
   @override
-  Future<AdResult<void>> showInterstitial() {
-    return interstitialManager.show();
+  Future<AdResult<void>> showInterstitial(AdPlacement placement) {
+    if (placement.type != AdType.interstitial) {
+      return Future.value(_invalidPlacement(placement, AdType.interstitial));
+    }
+
+    return _interstitialManager(placement).show();
   }
 
   @override
   Future<AdResult<void>> showRewarded({
+    required AdPlacement placement,
     required void Function() onRewardEarned,
   }) {
-    return rewardManager.show(onRewardEarned: onRewardEarned);
+    if (placement.type != AdType.rewarded) {
+      return Future.value(_invalidPlacement(placement, AdType.rewarded));
+    }
+
+    return _rewardManager(placement).show(onRewardEarned: onRewardEarned);
   }
 
   @override
-  Future<AdResult<void>> showAppOpen() {
-    return appOpenManager.show();
+  Future<AdResult<void>> showAppOpen(AdPlacement placement) {
+    if (placement.type != AdType.appOpen) {
+      return Future.value(_invalidPlacement(placement, AdType.appOpen));
+    }
+
+    return _appOpenManager(placement).show();
+  }
+
+  BannerManager _bannerManager(AdPlacement placement) {
+    return _bannerManagers.putIfAbsent(
+      placement,
+      () => BannerManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
+  InterstitialManager _interstitialManager(AdPlacement placement) {
+    return _interstitialManagers.putIfAbsent(
+      placement,
+      () => InterstitialManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
+  RewardManager _rewardManager(AdPlacement placement) {
+    return _rewardManagers.putIfAbsent(
+      placement,
+      () => RewardManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
+  AppOpenManager _appOpenManager(AdPlacement placement) {
+    return _appOpenManagers.putIfAbsent(
+      placement,
+      () => AppOpenManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
+  NativeManager _nativeManager(AdPlacement placement) {
+    return _nativeManagers.putIfAbsent(
+      placement,
+      () => NativeManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
+  AdResult<void> _invalidPlacement(AdPlacement placement, AdType expectedType) {
+    return AdResult.failure(
+      AdFailure(
+        code: 'invalid_placement_type',
+        message:
+            'Placement ${placement.key} uses ${placement.type.name}, expected ${expectedType.name}.',
+      ),
+    );
   }
 
   @override
   Future<void> dispose() async {
-    await bannerManager.dispose();
-    await interstitialManager.dispose();
-    await rewardManager.dispose();
-    await appOpenManager.dispose();
-    await nativeManager.dispose();
+    final managers = [
+      ..._bannerManagers.values,
+      ..._interstitialManagers.values,
+      ..._rewardManagers.values,
+      ..._appOpenManagers.values,
+      ..._nativeManagers.values,
+    ];
+
+    for (final manager in managers) {
+      await manager.dispose();
+    }
+
+    _bannerManagers.clear();
+    _interstitialManagers.clear();
+    _rewardManagers.clear();
+    _appOpenManagers.clear();
+    _nativeManagers.clear();
+
     await service.dispose();
   }
 }

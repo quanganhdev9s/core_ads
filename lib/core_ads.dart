@@ -1,3 +1,4 @@
+export 'src/core/config/ad_placement.dart';
 export 'src/core/config/ad_unit_ids.dart';
 export 'src/core/config/ads_config.dart';
 export 'src/core/config/ads_environment.dart';

@@ -1,5 +1,5 @@
+import '../core/config/ad_placement.dart';
 import '../core/enums/ad_load_status.dart';
-import '../core/enums/ad_type.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../services/ads_service.dart';
@@ -9,10 +9,15 @@ import 'consent_manager.dart';
 /// Manages rewarded ad preload, show, reward callback, and reload flow.
 class RewardManager implements AdManager {
   /// Creates a reward manager.
-  RewardManager({required this.service, required this.consentManager});
+  RewardManager({
+    required this.service,
+    required this.consentManager,
+    required this.placement,
+  });
 
   final AdsService service;
   final ConsentManager consentManager;
+  final AdPlacement placement;
 
   AdLoadStatus _status = AdLoadStatus.idle;
 
@@ -27,7 +32,7 @@ class RewardManager implements AdManager {
     }
 
     _status = AdLoadStatus.loading;
-    final result = await service.load(AdType.rewarded);
+    final result = await service.load(placement);
     _status = result.isSuccess ? AdLoadStatus.ready : AdLoadStatus.failed;
 
     return result;
@@ -39,7 +44,10 @@ class RewardManager implements AdManager {
       return const AdResult.failure(AdFailure.notReady());
     }
 
-    final result = await service.showRewarded(onRewardEarned: onRewardEarned);
+    final result = await service.showRewarded(
+      placement: placement,
+      onRewardEarned: onRewardEarned,
+    );
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
     if (result.isSuccess) {

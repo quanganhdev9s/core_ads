@@ -1,5 +1,5 @@
+import '../core/config/ad_placement.dart';
 import '../core/enums/ad_load_status.dart';
-import '../core/enums/ad_type.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../services/ads_service.dart';
@@ -12,12 +12,14 @@ class AppOpenManager implements AdManager {
   AppOpenManager({
     required this.service,
     required this.consentManager,
+    required this.placement,
     this.expiration = const Duration(hours: 4),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
   final AdsService service;
   final ConsentManager consentManager;
+  final AdPlacement placement;
   final Duration expiration;
   final DateTime Function() _now;
 
@@ -45,7 +47,7 @@ class AppOpenManager implements AdManager {
     }
 
     _status = AdLoadStatus.loading;
-    final result = await service.load(AdType.appOpen);
+    final result = await service.load(placement);
     if (result.isSuccess) {
       _status = AdLoadStatus.ready;
       _loadedAt = _now();
@@ -71,7 +73,7 @@ class AppOpenManager implements AdManager {
       );
     }
 
-    final result = await service.show(AdType.appOpen);
+    final result = await service.show(placement);
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
     if (result.isSuccess) {
