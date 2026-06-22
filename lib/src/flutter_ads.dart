@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
 import 'core/results/ad_failure.dart';
@@ -6,6 +8,7 @@ import 'data/repositories/ads_repository_impl.dart';
 import 'domain/repositories/ads_repository.dart';
 import 'services/ads_service.dart';
 import 'services/google_ads_service.dart';
+import 'managers/google_consent_manager.dart';
 
 /// Public entry-point used by applications to interact with ads.
 class FlutterAds {
@@ -27,9 +30,12 @@ class FlutterAds {
       return _repository!.initialize();
     }
 
+    final resolvedService = service ?? GoogleAdsService();
+
     _repository = AdsRepositoryImpl(
       config: config,
-      service: service ?? GoogleAdsService(),
+      service: resolvedService,
+      consentManager: service == null ? GoogleConsentManager() : null,
     );
 
     return _repository!.initialize();
@@ -84,6 +90,16 @@ class FlutterAds {
     }
 
     return repository.load(placement);
+  }
+
+  /// Builds a banner widget for [placement].
+  static Widget banner(AdPlacement placement) {
+    final repository = _repository;
+    if (repository == null) {
+      return const SizedBox.shrink();
+    }
+
+    return repository.banner(placement);
   }
 
   /// Disposes ads resources.

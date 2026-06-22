@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
+import '../core/config/ads_request_config.dart';
 import '../core/enums/ad_type.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
@@ -34,6 +36,7 @@ class GoogleAdsService implements AdsService {
     _logger = AdsLogger(enabled: config.enableDebugLogs);
 
     try {
+      await _updateRequestConfiguration(config.request);
       await MobileAds.instance.initialize();
       _logger.log('Google Mobile Ads initialized');
       return const AdResult.success(null);
@@ -42,6 +45,47 @@ class GoogleAdsService implements AdsService {
         AdFailure.unknown('Failed to initialize ads', error),
       );
     }
+  }
+
+  Future<void> _updateRequestConfiguration(AdsRequestConfig config) {
+    return MobileAds.instance.updateRequestConfiguration(
+      RequestConfiguration(
+        testDeviceIds: config.testDeviceIds.isEmpty
+            ? null
+            : config.testDeviceIds,
+        maxAdContentRating: _maxAdContentRating(config.maxAdContentRating),
+        tagForChildDirectedTreatment: _childDirectedTag(
+          config.tagForChildDirectedTreatment,
+        ),
+        tagForUnderAgeOfConsent: _underAgeTag(config.tagForUnderAgeOfConsent),
+      ),
+    );
+  }
+
+  String? _maxAdContentRating(AdsMaxAdContentRating? rating) {
+    return switch (rating) {
+      null => null,
+      AdsMaxAdContentRating.g => MaxAdContentRating.g,
+      AdsMaxAdContentRating.pg => MaxAdContentRating.pg,
+      AdsMaxAdContentRating.t => MaxAdContentRating.t,
+      AdsMaxAdContentRating.ma => MaxAdContentRating.ma,
+    };
+  }
+
+  int? _childDirectedTag(bool? value) {
+    return switch (value) {
+      null => null,
+      true => TagForChildDirectedTreatment.yes,
+      false => TagForChildDirectedTreatment.no,
+    };
+  }
+
+  int? _underAgeTag(bool? value) {
+    return switch (value) {
+      null => null,
+      true => TagForUnderAgeOfConsent.yes,
+      false => TagForUnderAgeOfConsent.no,
+    };
   }
 
   @override
@@ -108,6 +152,20 @@ class GoogleAdsService implements AdsService {
     );
 
     return completer.future;
+  }
+
+  @override
+  Widget banner(AdPlacement placement) {
+    final ad = _bannerAds[placement];
+    if (ad == null) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      width: ad.size.width.toDouble(),
+      height: ad.size.height.toDouble(),
+      child: AdWidget(ad: ad),
+    );
   }
 
   Future<AdResult<void>> _loadBanner(AdPlacement placement) async {

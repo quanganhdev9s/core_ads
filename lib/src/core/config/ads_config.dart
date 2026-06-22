@@ -1,4 +1,6 @@
 import '../enums/ad_network.dart';
+import 'ads_consent_config.dart';
+import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
 import 'ads_environment.dart';
 
@@ -9,6 +11,8 @@ class AdsConfig {
     required this.environment,
     required this.adUnitIds,
     this.network = AdNetwork.google,
+    this.consent = const AdsConsentConfig(),
+    this.request = const AdsRequestConfig(),
     this.enableDebugLogs = false,
   });
 
@@ -20,6 +24,12 @@ class AdsConfig {
 
   /// The ad network implementation to use internally.
   final AdNetwork network;
+
+  /// Consent flow configuration.
+  final AdsConsentConfig consent;
+
+  /// Global ad request configuration.
+  final AdsRequestConfig request;
 
   /// Whether internal debug logging is enabled.
   final bool enableDebugLogs;

@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/enums/ad_load_status.dart';
@@ -80,6 +82,11 @@ class MemoryAdsService implements AdsService {
     }
 
     return result;
+  }
+
+  @override
+  Widget banner(AdPlacement placement) {
+    return const SizedBox.shrink();
   }
 
   @override

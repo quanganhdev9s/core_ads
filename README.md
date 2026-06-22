@@ -59,8 +59,57 @@ await FlutterAds.initialize(
       AppAdPlacements.levelCompleteInterstitial: 'ca-app-pub-xxx/interstitial',
       AppAdPlacements.doubleReward: 'ca-app-pub-xxx/rewarded',
     }),
+  consent: AdsConsentConfig(
+    enabled: true,
+    tagForUnderAgeOfConsent: false,
+    requestTrackingAuthorizationOnIos: true,
+  ),
+    request: AdsRequestConfig(
+      maxAdContentRating: AdsMaxAdContentRating.t,
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false,
+    ),
     enableDebugLogs: true,
   ),
+);
+```
+
+For consent testing, configure debug geography and test device IDs from the app:
+
+```dart
+AdsConfig(
+  environment: AdsEnvironment.test,
+  adUnitIds: AdUnitIds({
+    AppAdPlacements.homeTopBanner: 'ca-app-pub-xxx/test_banner',
+  }),
+  consent: AdsConsentConfig(
+    debugGeography: AdsConsentDebugGeography.eea,
+    testDeviceIds: ['TEST_DEVICE_ID'],
+    resetOnInitialize: true,
+  ),
+  request: AdsRequestConfig(
+    testDeviceIds: ['TEST_DEVICE_ID'],
+  ),
+);
+```
+
+`resetOnInitialize` should only be used while testing consent flows.
+
+On iOS, ATT is requested after UMP consent allows ads. The host app must add
+`NSUserTrackingUsageDescription` to `ios/Runner/Info.plist`:
+
+```xml
+<key>NSUserTrackingUsageDescription</key>
+<string>This identifier will be used to deliver personalized ads to you.</string>
+```
+
+If the app shows another native permission dialog during first launch, consider
+delaying ads initialization or increasing `trackingAuthorizationDelay`:
+
+```dart
+AdsConsentConfig(
+  requestTrackingAuthorizationOnIos: true,
+  trackingAuthorizationDelay: Duration(milliseconds: 500),
 );
 ```
 
@@ -73,6 +122,20 @@ await FlutterAds.load(AppAdPlacements.homeTopBanner);
 await FlutterAds.load(AppAdPlacements.resultBottomBanner);
 await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
 await FlutterAds.load(AppAdPlacements.doubleReward);
+```
+
+Render a banner placement without importing Google Mobile Ads:
+
+```dart
+const AdsBanner(
+  placement: AppAdPlacements.homeTopBanner,
+);
+```
+
+Or build the banner through the facade:
+
+```dart
+FlutterAds.banner(AppAdPlacements.resultBottomBanner);
 ```
 
 Show fullscreen ads with the matching placement:

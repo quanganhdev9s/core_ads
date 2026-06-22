@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import '../../core/config/ad_placement.dart';
 import '../../core/results/ad_result.dart';
 
@@ -8,6 +10,9 @@ abstract interface class AdsRepository {
 
   /// Loads an ad for [placement].
   Future<AdResult<void>> load(AdPlacement placement);
+
+  /// Builds a banner widget for [placement].
+  Widget banner(AdPlacement placement);
 
   /// Shows an interstitial ad when one is ready.
   Future<AdResult<void>> showInterstitial(AdPlacement placement);

@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import '../../core/config/ad_placement.dart';
 import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
@@ -38,9 +40,13 @@ class AdsRepositoryImpl implements AdsRepository {
 
   @override
   Future<AdResult<void>> initialize() async {
-    final consentResult = await consentManager.requestConsent();
+    final consentResult = await consentManager.requestConsent(config);
     if (consentResult.isFailure) {
       return consentResult;
+    }
+
+    if (!consentManager.canRequestAds) {
+      return const AdResult.success(null);
     }
 
     final initializeResult = await service.initialize(config);
@@ -68,6 +74,16 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.native => _nativeManager(placement).load(),
       AdType.appOpen => _appOpenManager(placement).load(),
     };
+  }
+
+  @override
+  Widget banner(AdPlacement placement) {
+    if (placement.type != AdType.banner) {
+      return const SizedBox.shrink();
+    }
+
+    _bannerManager(placement);
+    return service.banner(placement);
   }
 
   @override
