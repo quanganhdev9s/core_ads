@@ -80,6 +80,16 @@ class FlutterAds {
     return repository.showAppOpen(placement);
   }
 
+  /// Handles an app resume event for an app open ad [placement].
+  static Future<AdResult<void>> handleAppResume(AdPlacement placement) {
+    final repository = _repository;
+    if (repository == null) {
+      return Future.value(const AdResult.failure(AdFailure.notReady()));
+    }
+
+    return repository.handleAppResume(placement);
+  }
+
   /// Requests loading an ad for [placement].
   ///
   /// This is mainly useful for explicit preloading in advanced flows.

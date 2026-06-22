@@ -39,6 +39,11 @@ class AppAdPlacements {
     key: 'double_reward',
     type: AdType.rewarded,
   );
+
+  static const appOpen = AdPlacement(
+    key: 'app_open',
+    type: AdType.appOpen,
+  );
 }
 ```
 
@@ -122,6 +127,7 @@ await FlutterAds.load(AppAdPlacements.homeTopBanner);
 await FlutterAds.load(AppAdPlacements.resultBottomBanner);
 await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
 await FlutterAds.load(AppAdPlacements.doubleReward);
+await FlutterAds.load(AppAdPlacements.appOpen);
 ```
 
 Render a banner placement without importing Google Mobile Ads:
@@ -151,6 +157,25 @@ await FlutterAds.showRewarded(
     // Grant the reward here.
   },
 );
+```
+
+Handle app open ads when the app resumes:
+
+```dart
+final adsLifecycleObserver = AdsAppLifecycleObserver(
+  appOpenPlacement: AppAdPlacements.appOpen,
+);
+
+adsLifecycleObserver.attach();
+
+// Later, when the app no longer needs ads lifecycle handling:
+adsLifecycleObserver.detach();
+```
+
+You can also call the resume handler manually:
+
+```dart
+await FlutterAds.handleAppResume(AppAdPlacements.appOpen);
 ```
 
 Dispose resources when the app no longer needs ads:

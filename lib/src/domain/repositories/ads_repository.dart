@@ -26,6 +26,9 @@ abstract interface class AdsRepository {
   /// Shows an app open ad when one is ready and valid.
   Future<AdResult<void>> showAppOpen(AdPlacement placement);
 
+  /// Handles an app resume event for an app open ad placement.
+  Future<AdResult<void>> handleAppResume(AdPlacement placement);
+
   /// Disposes all managed ads resources.
   Future<void> dispose();
 }

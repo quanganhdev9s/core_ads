@@ -13,6 +13,7 @@ export 'src/core/results/ad_failure.dart';
 export 'src/core/results/ad_result.dart';
 export 'src/domain/repositories/ads_repository.dart';
 export 'src/flutter_ads.dart';
+export 'src/lifecycle/ads_app_lifecycle_observer.dart';
 export 'src/managers/ad_manager.dart';
 export 'src/managers/app_tracking_transparency_manager.dart';
 export 'src/managers/app_open_manager.dart';

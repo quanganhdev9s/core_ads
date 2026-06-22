@@ -25,6 +25,7 @@ class AppOpenManager implements AdManager {
 
   AdLoadStatus _status = AdLoadStatus.idle;
   DateTime? _loadedAt;
+  bool _isShowing = false;
 
   @override
   AdLoadStatus get status => _status;
@@ -61,6 +62,15 @@ class AppOpenManager implements AdManager {
 
   /// Shows the app open ad only when it is ready and not expired.
   Future<AdResult<void>> show() async {
+    if (_isShowing) {
+      return const AdResult.failure(
+        AdFailure(
+          code: 'already_showing',
+          message: 'App open ad is already showing.',
+        ),
+      );
+    }
+
     if (_status != AdLoadStatus.ready) {
       return const AdResult.failure(AdFailure.notReady());
     }
@@ -73,7 +83,9 @@ class AppOpenManager implements AdManager {
       );
     }
 
+    _isShowing = true;
     final result = await service.show(placement);
+    _isShowing = false;
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
     if (result.isSuccess) {
@@ -83,9 +95,32 @@ class AppOpenManager implements AdManager {
     return result;
   }
 
+  /// Handles an app resume event.
+  ///
+  /// Shows a valid cached app open ad. If none is ready, or the cached ad is
+  /// expired, this method loads a fresh ad instead.
+  Future<AdResult<void>> handleAppResume() async {
+    if (_isShowing || _status == AdLoadStatus.loading) {
+      return const AdResult.success(null);
+    }
+
+    if (_status != AdLoadStatus.ready) {
+      return load();
+    }
+
+    if (isExpired) {
+      _status = AdLoadStatus.failed;
+      _loadedAt = null;
+      return load();
+    }
+
+    return show();
+  }
+
   @override
   Future<void> dispose() async {
     _status = AdLoadStatus.disposed;
     _loadedAt = null;
+    _isShowing = false;
   }
 }

@@ -116,6 +116,15 @@ class AdsRepositoryImpl implements AdsRepository {
     return _appOpenManager(placement).show();
   }
 
+  @override
+  Future<AdResult<void>> handleAppResume(AdPlacement placement) {
+    if (placement.type != AdType.appOpen) {
+      return Future.value(_invalidPlacement(placement, AdType.appOpen));
+    }
+
+    return _appOpenManager(placement).handleAppResume();
+  }
+
   BannerManager _bannerManager(AdPlacement placement) {
     return _bannerManagers.putIfAbsent(
       placement,
