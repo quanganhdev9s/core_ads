@@ -44,7 +44,13 @@ class GoogleConsentManager extends ConsentManager {
 
       final formError = await _loadAndShowConsentFormIfRequired();
       if (formError != null) {
-        updateCanRequestAds(await ConsentInformation.instance.canRequestAds());
+        final canRequest = await ConsentInformation.instance.canRequestAds();
+        updateCanRequestAds(canRequest);
+
+        if (canRequest) {
+          _logger.log('Consent form error, but ads can still be requested');
+          return const AdResult.success(null);
+        }
         return AdResult.failure(
           AdFailure(
             code: 'consent_form_error',
