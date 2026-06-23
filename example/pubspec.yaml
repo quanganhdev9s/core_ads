@@ -1,0 +1,19 @@
+name: core_ads_example
+description: Example app for the core_ads package.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  core_ads:
+    path: ..
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
