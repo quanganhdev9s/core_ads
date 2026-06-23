@@ -4,6 +4,7 @@ import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/enums/ad_type.dart';
 import '../core/results/ad_result.dart';
+import '../ads/banner/banner_ad_config.dart';
 
 /// SDK-facing contract implemented by concrete ad network services.
 abstract interface class AdsService {
@@ -11,7 +12,10 @@ abstract interface class AdsService {
   Future<AdResult<void>> initialize(AdsConfig config);
 
   /// Loads an ad for [placement].
-  Future<AdResult<void>> load(AdPlacement placement);
+  Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  });
 
   /// Shows an ad for [placement].
   Future<AdResult<void>> show(AdPlacement placement);

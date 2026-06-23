@@ -4,6 +4,7 @@ export 'src/core/config/ads_config.dart';
 export 'src/core/config/ads_consent_config.dart';
 export 'src/core/config/ads_environment.dart';
 export 'src/core/config/ads_request_config.dart';
+export 'src/ads/banner/banner_ad_config.dart';
 export 'src/ads/native/native_ad_config.dart';
 export 'src/core/enums/ad_load_status.dart';
 export 'src/core/enums/ad_network.dart';

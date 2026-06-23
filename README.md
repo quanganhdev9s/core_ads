@@ -83,6 +83,9 @@ await AppAds.initialize(
       AppAdPlacements.appOpen: 'ca-app-pub-xxx/app_open',
       AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
     }),
+    bannerAdConfigs: BannerAdConfigs({
+      AppAdPlacements.homeTopBanner: BannerAdConfig.banner(),
+    }),
     nativeAdConfigs: NativeAdConfigs({
       AppAdPlacements.articleNative: NativeAdConfig(
         factoryId: 'article_native_factory',
@@ -147,6 +150,17 @@ AdsConsentConfig(
 ```dart
 const AdsBanner(
   placement: AppAdPlacements.homeTopBanner,
+  config: BannerAdConfig.banner(),
+);
+```
+
+Supported sizes are `banner`, `largeBanner`, `mediumRectangle`, `fullBanner`,
+`leaderboard`, and `anchoredAdaptive`.
+
+```dart
+const AdsBanner(
+  placement: AppAdPlacements.homeTopBanner,
+  config: BannerAdConfig.anchoredAdaptive(width: 360),
 );
 ```
 
@@ -155,6 +169,7 @@ With custom placeholders:
 ```dart
 AdsBanner(
   placement: AppAdPlacements.homeTopBanner,
+  config: const BannerAdConfig.largeBanner(),
   loading: const AdsLoadingWidget(),
   error: const SizedBox.shrink(),
 );

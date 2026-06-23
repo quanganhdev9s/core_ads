@@ -4,6 +4,7 @@ import '../../core/config/ad_placement.dart';
 import '../../core/results/ad_result.dart';
 import '../../app_ads.dart';
 import '../../widgets/ads_loading_widget.dart';
+import 'banner_ad_config.dart';
 
 /// Widget that loads and renders a banner ad for an app-defined placement.
 class AdsBanner extends StatefulWidget {
@@ -13,8 +14,7 @@ class AdsBanner extends StatefulWidget {
     super.key,
     this.loading,
     this.error,
-    this.width = 320,
-    this.height = 50,
+    this.config = const BannerAdConfig.banner(),
   });
 
   /// Banner placement to render.
@@ -26,11 +26,8 @@ class AdsBanner extends StatefulWidget {
   /// Widget shown when the banner fails to load.
   final Widget? error;
 
-  /// Loading placeholder width.
-  final double width;
-
-  /// Loading placeholder height.
-  final double height;
+  /// Banner placeholder configuration.
+  final BannerAdConfig config;
 
   @override
   State<AdsBanner> createState() => _AdsBannerState();
@@ -38,38 +35,70 @@ class AdsBanner extends StatefulWidget {
 
 class _AdsBannerState extends State<AdsBanner> {
   Future<AdResult<void>>? _loadFuture;
+  BannerAdConfig? _resolvedConfig;
 
   @override
   void initState() {
     super.initState();
-    _loadFuture = AppAds.load(widget.placement);
+    _loadFuture = _load(widget.config);
   }
 
   @override
   void didUpdateWidget(covariant AdsBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.placement != widget.placement) {
-      _loadFuture = AppAds.load(widget.placement);
+    if (oldWidget.placement != widget.placement ||
+        oldWidget.config != widget.config) {
+      _resolvedConfig = null;
+      _loadFuture = _load(widget.config);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AdResult<void>>(
-      future: _loadFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return widget.loading ??
-              AdsLoadingWidget(width: widget.width, height: widget.height);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final resolvedConfig = _resolveConfig(constraints);
+        if (_resolvedConfig != resolvedConfig) {
+          _resolvedConfig = resolvedConfig;
+          _loadFuture = _load(resolvedConfig);
         }
 
-        final result = snapshot.data;
-        if (result == null || result.isFailure) {
-          return widget.error ?? const SizedBox.shrink();
-        }
+        return FutureBuilder<AdResult<void>>(
+          future: _loadFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return widget.loading ??
+                  AdsLoadingWidget(
+                    width: resolvedConfig.resolvedWidth,
+                    height: resolvedConfig.resolvedHeight,
+                  );
+            }
 
-        return AppAds.banner(widget.placement);
+            final result = snapshot.data;
+            if (result == null || result.isFailure) {
+              return widget.error ?? const SizedBox.shrink();
+            }
+
+            return AppAds.banner(widget.placement);
+          },
+        );
       },
     );
+  }
+
+  BannerAdConfig _resolveConfig(BoxConstraints constraints) {
+    if (!widget.config.needsResolvedWidth) {
+      return widget.config;
+    }
+
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : MediaQuery.sizeOf(context).width;
+
+    return widget.config.resolveWidth(width);
+  }
+
+  Future<AdResult<void>> _load(BannerAdConfig config) {
+    return AppAds.load(widget.placement, bannerConfig: config);
   }
 }

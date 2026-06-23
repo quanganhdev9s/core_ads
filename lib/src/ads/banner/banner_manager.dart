@@ -5,6 +5,7 @@ import '../../core/results/ad_result.dart';
 import '../../services/ads_service.dart';
 import '../../managers/ad_manager.dart';
 import '../../consent/consent_manager.dart';
+import 'banner_ad_config.dart';
 
 /// Manages banner ad loading and cache state.
 class BannerManager implements AdManager {
@@ -28,7 +29,7 @@ class BannerManager implements AdManager {
   bool get hasCachedBanner => _status == AdLoadStatus.ready;
 
   @override
-  Future<AdResult<void>> load() async {
+  Future<AdResult<void>> load({BannerAdConfig? config}) async {
     if (!consentManager.canRequestAds) {
       _status = AdLoadStatus.failed;
       return const AdResult.failure(AdFailure.consentDenied());
@@ -39,7 +40,7 @@ class BannerManager implements AdManager {
     }
 
     _status = AdLoadStatus.loading;
-    final result = await service.load(placement);
+    final result = await service.load(placement, bannerConfig: config);
     _status = result.isSuccess ? AdLoadStatus.ready : AdLoadStatus.failed;
 
     return result;

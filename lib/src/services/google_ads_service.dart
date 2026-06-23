@@ -15,6 +15,7 @@ import '../core/events/ads_reward_event.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
+import '../ads/banner/banner_ad_config.dart';
 import 'ads_service.dart';
 
 /// Google Mobile Ads implementation of [AdsService].
@@ -96,9 +97,12 @@ class GoogleAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> load(AdPlacement placement) {
+  Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  }) {
     return switch (placement.type) {
-      AdType.banner => _loadBanner(placement),
+      AdType.banner => _loadBanner(placement, config: bannerConfig),
       AdType.interstitial => _loadInterstitial(placement),
       AdType.rewarded => _loadRewarded(placement),
       AdType.rewardedInterstitial => _loadRewardedInterstitial(placement),
@@ -279,10 +283,27 @@ class GoogleAdsService implements AdsService {
     }
   }
 
-  Future<AdResult<void>> _loadBanner(AdPlacement placement) async {
+  Future<AdResult<void>> _loadBanner(
+    AdPlacement placement, {
+    BannerAdConfig? config,
+  }) async {
     final adUnitId = _adUnitIdFor(placement);
     if (adUnitId == null) {
       return _missingAdUnitId(placement);
+    }
+
+    final bannerConfig =
+        config ??
+        _config?.bannerAdConfigs.configFor(placement) ??
+        const BannerAdConfig.banner();
+    final adSize = await _bannerAdSize(bannerConfig);
+    if (adSize == null) {
+      return AdResult.failure(
+        AdFailure(
+          code: 'invalid_banner_size',
+          message: 'Could not resolve banner size for ${placement.key}.',
+        ),
+      );
     }
 
     final completer = Completer<AdResult<void>>();
@@ -291,7 +312,7 @@ class GoogleAdsService implements AdsService {
     final bannerAd = BannerAd(
       adUnitId: adUnitId,
       request: _request,
-      size: AdSize.banner,
+      size: adSize,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           _bannerAds[placement] = ad as BannerAd;
@@ -315,6 +336,20 @@ class GoogleAdsService implements AdsService {
 
     await bannerAd.load();
     return completer.future;
+  }
+
+  Future<AdSize?> _bannerAdSize(BannerAdConfig config) async {
+    return switch (config.size) {
+      BannerAdSize.banner => AdSize.banner,
+      BannerAdSize.largeBanner => AdSize.largeBanner,
+      BannerAdSize.mediumRectangle => AdSize.mediumRectangle,
+      BannerAdSize.fullBanner => AdSize.fullBanner,
+      BannerAdSize.leaderboard => AdSize.leaderboard,
+      BannerAdSize.anchoredAdaptive =>
+        AdSize.getLargeAnchoredAdaptiveBannerAdSize(
+          config.resolvedWidth.round(),
+        ),
+    };
   }
 
   Future<AdResult<void>> _loadNative(AdPlacement placement) async {

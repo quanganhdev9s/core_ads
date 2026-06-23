@@ -7,6 +7,7 @@ import '../core/enums/ad_type.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
+import '../ads/banner/banner_ad_config.dart';
 import 'ads_service.dart';
 
 /// A lightweight in-memory ads service used before a real SDK is configured.
@@ -34,7 +35,10 @@ class MemoryAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> load(AdPlacement placement) async {
+  Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  }) async {
     if (!_isInitialized) {
       return const AdResult.failure(
         AdFailure(

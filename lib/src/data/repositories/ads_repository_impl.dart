@@ -8,6 +8,7 @@ import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
 import '../../domain/repositories/ads_repository.dart';
 import '../../ads/app_open/app_open_manager.dart';
+import '../../ads/banner/banner_ad_config.dart';
 import '../../ads/banner/banner_manager.dart';
 import '../../ads/interstitial/interstitial_manager.dart';
 import '../../ads/native/native_manager.dart';
@@ -68,9 +69,12 @@ class AdsRepositoryImpl implements AdsRepository {
   }
 
   @override
-  Future<AdResult<void>> load(AdPlacement placement) {
+  Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  }) {
     return switch (placement.type) {
-      AdType.banner => _bannerManager(placement).load(),
+      AdType.banner => _bannerManager(placement).load(config: bannerConfig),
       AdType.interstitial => _interstitialManager(placement).load(),
       AdType.rewarded => _rewardManager(placement).load(),
       AdType.rewardedInterstitial => _rewardedInterstitialManager(

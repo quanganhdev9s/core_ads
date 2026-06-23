@@ -41,6 +41,10 @@ class ExamplePlacements {
   ];
 }
 
+class ExampleAdConfigs {
+  static const banner = BannerAdConfig.anchoredAdaptive();
+}
+
 class CoreAdsExampleApp extends StatelessWidget {
   const CoreAdsExampleApp({super.key});
 
@@ -121,6 +125,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               'ca-app-pub-3940256099942544/5354046379',
           ExamplePlacements.appOpen: 'ca-app-pub-3940256099942544/9257395921',
           ExamplePlacements.native: 'ca-app-pub-3940256099942544/2247696110',
+        }),
+        bannerAdConfigs: BannerAdConfigs({
+          ExamplePlacements.banner: ExampleAdConfigs.banner,
         }),
         nativeAdConfigs: NativeAdConfigs({
           ExamplePlacements.native: const NativeAdConfig(
@@ -324,7 +331,10 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           const Text('Banner'),
           const SizedBox(height: 8),
           if (_adsInitialized)
-            const AdsBanner(placement: ExamplePlacements.banner)
+            const AdsBanner(
+              placement: ExamplePlacements.banner,
+              config: ExampleAdConfigs.banner,
+            )
           else
             const AdsLoadingWidget(),
           const SizedBox(height: 24),

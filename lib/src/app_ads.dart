@@ -5,6 +5,7 @@ import 'core/config/ad_placement.dart';
 import 'core/enums/ad_type.dart';
 import 'core/results/ad_failure.dart';
 import 'core/results/ad_result.dart';
+import 'ads/banner/banner_ad_config.dart';
 import 'data/repositories/ads_repository_impl.dart';
 import 'domain/repositories/ads_repository.dart';
 import 'services/ads_service.dart';
@@ -113,13 +114,16 @@ class AppAds {
   /// Requests loading an ad for [placement].
   ///
   /// This is mainly useful for explicit preloading in advanced flows.
-  static Future<AdResult<void>> load(AdPlacement placement) {
+  static Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  }) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.load(placement);
+    return repository.load(placement, bannerConfig: bannerConfig);
   }
 
   /// Builds a banner widget for [placement].

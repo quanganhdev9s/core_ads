@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_type.dart';
 import '../../core/results/ad_result.dart';
+import '../../ads/banner/banner_ad_config.dart';
 
 /// Public domain contract for ads operations.
 abstract interface class AdsRepository {
@@ -10,7 +11,10 @@ abstract interface class AdsRepository {
   Future<AdResult<void>> initialize();
 
   /// Loads an ad for [placement].
-  Future<AdResult<void>> load(AdPlacement placement);
+  Future<AdResult<void>> load(
+    AdPlacement placement, {
+    BannerAdConfig? bannerConfig,
+  });
 
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);
