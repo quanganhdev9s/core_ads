@@ -14,11 +14,20 @@ abstract interface class AdsRepository {
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);
 
+  /// Builds a native ad widget for [placement].
+  Widget nativeAd(AdPlacement placement);
+
   /// Shows an interstitial ad when one is ready.
   Future<AdResult<void>> showInterstitial(AdPlacement placement);
 
   /// Shows a rewarded ad and completes after the reward flow finishes.
   Future<AdResult<void>> showRewarded({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  });
+
+  /// Shows a rewarded interstitial ad and completes after the reward flow finishes.
+  Future<AdResult<void>> showRewardedInterstitial({
     required AdPlacement placement,
     required void Function() onRewardEarned,
   });

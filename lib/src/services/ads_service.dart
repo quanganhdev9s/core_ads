@@ -22,8 +22,18 @@ abstract interface class AdsService {
     required void Function() onRewardEarned,
   });
 
+  /// Shows a rewarded interstitial ad and calls [onRewardEarned] only when the
+  /// SDK confirms the reward.
+  Future<AdResult<void>> showRewardedInterstitial({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  });
+
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);
+
+  /// Builds a native ad widget for [placement].
+  Widget nativeAd(AdPlacement placement);
 
   /// Disposes resources owned by this service.
   Future<void> dispose();

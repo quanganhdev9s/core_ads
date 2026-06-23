@@ -26,7 +26,9 @@ class GoogleAdsService implements AdsService {
   final Map<AdPlacement, BannerAd> _bannerAds = {};
   final Map<AdPlacement, InterstitialAd> _interstitialAds = {};
   final Map<AdPlacement, RewardedAd> _rewardedAds = {};
+  final Map<AdPlacement, RewardedInterstitialAd> _rewardedInterstitialAds = {};
   final Map<AdPlacement, AppOpenAd> _appOpenAds = {};
+  final Map<AdPlacement, NativeAd> _nativeAds = {};
 
   AdRequest get _request => adRequest ?? const AdRequest();
 
@@ -94,8 +96,8 @@ class GoogleAdsService implements AdsService {
       AdType.banner => _loadBanner(placement),
       AdType.interstitial => _loadInterstitial(placement),
       AdType.rewarded => _loadRewarded(placement),
-      AdType.rewardedInterstitial => _unsupported(placement),
-      AdType.native => _unsupported(placement),
+      AdType.rewardedInterstitial => _loadRewardedInterstitial(placement),
+      AdType.native => _loadNative(placement),
       AdType.appOpen => _loadAppOpen(placement),
     };
   }
@@ -155,6 +157,47 @@ class GoogleAdsService implements AdsService {
   }
 
   @override
+  Future<AdResult<void>> showRewardedInterstitial({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  }) async {
+    final ad = _rewardedInterstitialAds[placement];
+    if (ad == null) {
+      return const AdResult.failure(AdFailure.notReady());
+    }
+
+    final completer = Completer<AdResult<void>>();
+    ad.fullScreenContentCallback =
+        FullScreenContentCallback<RewardedInterstitialAd>(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            _rewardedInterstitialAds.remove(placement);
+            if (!completer.isCompleted) {
+              completer.complete(const AdResult.success(null));
+            }
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) {
+            ad.dispose();
+            _rewardedInterstitialAds.remove(placement);
+            if (!completer.isCompleted) {
+              completer.complete(AdResult.failure(_mapAdError(error)));
+            }
+          },
+        );
+
+    await ad.show(
+      onUserEarnedReward: (_, reward) {
+        _logger.log(
+          'Rewarded interstitial reward earned: ${reward.amount} ${reward.type}',
+        );
+        onRewardEarned();
+      },
+    );
+
+    return completer.future;
+  }
+
+  @override
   Widget banner(AdPlacement placement) {
     final ad = _bannerAds[placement];
     if (ad == null) {
@@ -164,6 +207,21 @@ class GoogleAdsService implements AdsService {
     return SizedBox(
       width: ad.size.width.toDouble(),
       height: ad.size.height.toDouble(),
+      child: AdWidget(ad: ad),
+    );
+  }
+
+  @override
+  Widget nativeAd(AdPlacement placement) {
+    final ad = _nativeAds[placement];
+    final config = _config?.nativeAdConfigs.configFor(placement);
+    if (ad == null || config == null) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      width: config.width,
+      height: config.height,
       child: AdWidget(ad: ad),
     );
   }
@@ -196,6 +254,48 @@ class GoogleAdsService implements AdsService {
     );
 
     await bannerAd.load();
+    return completer.future;
+  }
+
+  Future<AdResult<void>> _loadNative(AdPlacement placement) async {
+    final adUnitId = _adUnitIdFor(placement);
+    if (adUnitId == null) {
+      return _missingAdUnitId(placement);
+    }
+
+    final nativeConfig = _config?.nativeAdConfigs.configFor(placement);
+    if (nativeConfig == null) {
+      return AdResult.failure(
+        AdFailure(
+          code: 'missing_native_ad_config',
+          message: 'Missing native ad config for placement ${placement.key}.',
+        ),
+      );
+    }
+
+    final completer = Completer<AdResult<void>>();
+    _nativeAds.remove(placement)?.dispose();
+
+    final nativeAd = NativeAd(
+      adUnitId: adUnitId,
+      factoryId: nativeConfig.factoryId,
+      request: _request,
+      customOptions: nativeConfig.customOptions,
+      listener: NativeAdListener(
+        onAdLoaded: (ad) {
+          _nativeAds[placement] = ad as NativeAd;
+          _logger.log('${placement.key} native loaded');
+          completer.complete(const AdResult.success(null));
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          _nativeAds.remove(placement);
+          completer.complete(AdResult.failure(_mapAdError(error)));
+        },
+      ),
+    );
+
+    await nativeAd.load();
     return completer.future;
   }
 
@@ -242,6 +342,33 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _rewardedAds[placement] = ad;
           _logger.log('${placement.key} rewarded loaded');
+          completer.complete(const AdResult.success(null));
+        },
+        onAdFailedToLoad: (error) {
+          completer.complete(AdResult.failure(_mapAdError(error)));
+        },
+      ),
+    );
+
+    return completer.future;
+  }
+
+  Future<AdResult<void>> _loadRewardedInterstitial(AdPlacement placement) {
+    final adUnitId = _adUnitIdFor(placement);
+    if (adUnitId == null) {
+      return Future.value(_missingAdUnitId(placement));
+    }
+
+    final completer = Completer<AdResult<void>>();
+    _rewardedInterstitialAds.remove(placement)?.dispose();
+
+    RewardedInterstitialAd.load(
+      adUnitId: adUnitId,
+      request: _request,
+      rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedInterstitialAds[placement] = ad;
+          _logger.log('${placement.key} rewarded interstitial loaded');
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (error) {
@@ -387,13 +514,21 @@ class GoogleAdsService implements AdsService {
     for (final ad in _rewardedAds.values) {
       ad.dispose();
     }
+    for (final ad in _rewardedInterstitialAds.values) {
+      ad.dispose();
+    }
     for (final ad in _appOpenAds.values) {
+      ad.dispose();
+    }
+    for (final ad in _nativeAds.values) {
       ad.dispose();
     }
 
     _bannerAds.clear();
     _interstitialAds.clear();
     _rewardedAds.clear();
+    _rewardedInterstitialAds.clear();
     _appOpenAds.clear();
+    _nativeAds.clear();
   }
 }

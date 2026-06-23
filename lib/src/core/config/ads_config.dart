@@ -3,6 +3,7 @@ import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
 import 'ads_environment.dart';
+import 'native_ad_config.dart';
 
 /// Runtime configuration for the ads package.
 class AdsConfig {
@@ -13,6 +14,7 @@ class AdsConfig {
     this.network = AdNetwork.google,
     this.consent = const AdsConsentConfig(),
     this.request = const AdsRequestConfig(),
+    this.nativeAdConfigs = const NativeAdConfigs({}),
     this.enableDebugLogs = false,
   });
 
@@ -30,6 +32,9 @@ class AdsConfig {
 
   /// Global ad request configuration.
   final AdsRequestConfig request;
+
+  /// Native ad rendering configuration by placement.
+  final NativeAdConfigs nativeAdConfigs;
 
   /// Whether internal debug logging is enabled.
   final bool enableDebugLogs;

@@ -85,7 +85,25 @@ class MemoryAdsService implements AdsService {
   }
 
   @override
+  Future<AdResult<void>> showRewardedInterstitial({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  }) async {
+    final result = await show(placement);
+    if (result.isSuccess) {
+      onRewardEarned();
+    }
+
+    return result;
+  }
+
+  @override
   Widget banner(AdPlacement placement) {
+    return const SizedBox.shrink();
+  }
+
+  @override
+  Widget nativeAd(AdPlacement placement) {
     return const SizedBox.shrink();
   }
 

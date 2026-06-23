@@ -70,6 +70,25 @@ class FlutterAds {
     );
   }
 
+  /// Shows a rewarded interstitial ad for [placement] if one is ready.
+  ///
+  /// [onRewardEarned] is called only after the underlying ad network confirms
+  /// the user earned the reward.
+  static Future<AdResult<void>> showRewardedInterstitial({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  }) {
+    final repository = _repository;
+    if (repository == null) {
+      return Future.value(const AdResult.failure(AdFailure.notReady()));
+    }
+
+    return repository.showRewardedInterstitial(
+      placement: placement,
+      onRewardEarned: onRewardEarned,
+    );
+  }
+
   /// Shows an app open ad for [placement] if one is ready and valid.
   static Future<AdResult<void>> showAppOpen(AdPlacement placement) {
     final repository = _repository;
@@ -110,6 +129,16 @@ class FlutterAds {
     }
 
     return repository.banner(placement);
+  }
+
+  /// Builds a native ad widget for [placement].
+  static Widget nativeAd(AdPlacement placement) {
+    final repository = _repository;
+    if (repository == null) {
+      return const SizedBox.shrink();
+    }
+
+    return repository.nativeAd(placement);
   }
 
   /// Disposes ads resources.

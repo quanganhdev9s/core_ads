@@ -12,6 +12,7 @@ import '../../managers/consent_manager.dart';
 import '../../managers/interstitial_manager.dart';
 import '../../managers/native_manager.dart';
 import '../../managers/reward_manager.dart';
+import '../../managers/rewarded_interstitial_manager.dart';
 import '../../services/ads_service.dart';
 
 /// Default repository that coordinates app calls with ad managers.
@@ -35,6 +36,8 @@ class AdsRepositoryImpl implements AdsRepository {
   final Map<AdPlacement, BannerManager> _bannerManagers = {};
   final Map<AdPlacement, InterstitialManager> _interstitialManagers = {};
   final Map<AdPlacement, RewardManager> _rewardManagers = {};
+  final Map<AdPlacement, RewardedInterstitialManager>
+  _rewardedInterstitialManagers = {};
   final Map<AdPlacement, AppOpenManager> _appOpenManagers = {};
   final Map<AdPlacement, NativeManager> _nativeManagers = {};
 
@@ -63,14 +66,9 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.banner => _bannerManager(placement).load(),
       AdType.interstitial => _interstitialManager(placement).load(),
       AdType.rewarded => _rewardManager(placement).load(),
-      AdType.rewardedInterstitial => Future.value(
-        const AdResult.failure(
-          AdFailure(
-            code: 'unsupported_ad_type',
-            message: 'Rewarded interstitial is not implemented yet.',
-          ),
-        ),
-      ),
+      AdType.rewardedInterstitial => _rewardedInterstitialManager(
+        placement,
+      ).load(),
       AdType.native => _nativeManager(placement).load(),
       AdType.appOpen => _appOpenManager(placement).load(),
     };
@@ -84,6 +82,16 @@ class AdsRepositoryImpl implements AdsRepository {
 
     _bannerManager(placement);
     return service.banner(placement);
+  }
+
+  @override
+  Widget nativeAd(AdPlacement placement) {
+    if (placement.type != AdType.native) {
+      return const SizedBox.shrink();
+    }
+
+    _nativeManager(placement);
+    return service.nativeAd(placement);
   }
 
   @override
@@ -105,6 +113,22 @@ class AdsRepositoryImpl implements AdsRepository {
     }
 
     return _rewardManager(placement).show(onRewardEarned: onRewardEarned);
+  }
+
+  @override
+  Future<AdResult<void>> showRewardedInterstitial({
+    required AdPlacement placement,
+    required void Function() onRewardEarned,
+  }) {
+    if (placement.type != AdType.rewardedInterstitial) {
+      return Future.value(
+        _invalidPlacement(placement, AdType.rewardedInterstitial),
+      );
+    }
+
+    return _rewardedInterstitialManager(
+      placement,
+    ).show(onRewardEarned: onRewardEarned);
   }
 
   @override
@@ -158,6 +182,19 @@ class AdsRepositoryImpl implements AdsRepository {
     );
   }
 
+  RewardedInterstitialManager _rewardedInterstitialManager(
+    AdPlacement placement,
+  ) {
+    return _rewardedInterstitialManagers.putIfAbsent(
+      placement,
+      () => RewardedInterstitialManager(
+        service: service,
+        consentManager: consentManager,
+        placement: placement,
+      ),
+    );
+  }
+
   AppOpenManager _appOpenManager(AdPlacement placement) {
     return _appOpenManagers.putIfAbsent(
       placement,
@@ -196,6 +233,7 @@ class AdsRepositoryImpl implements AdsRepository {
       ..._bannerManagers.values,
       ..._interstitialManagers.values,
       ..._rewardManagers.values,
+      ..._rewardedInterstitialManagers.values,
       ..._appOpenManagers.values,
       ..._nativeManagers.values,
     ];
@@ -207,6 +245,7 @@ class AdsRepositoryImpl implements AdsRepository {
     _bannerManagers.clear();
     _interstitialManagers.clear();
     _rewardManagers.clear();
+    _rewardedInterstitialManagers.clear();
     _appOpenManagers.clear();
     _nativeManagers.clear();
 

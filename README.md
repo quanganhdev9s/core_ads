@@ -40,9 +40,19 @@ class AppAdPlacements {
     type: AdType.rewarded,
   );
 
+  static const levelBonusRewardedInterstitial = AdPlacement(
+    key: 'level_bonus_rewarded_interstitial',
+    type: AdType.rewardedInterstitial,
+  );
+
   static const appOpen = AdPlacement(
     key: 'app_open',
     type: AdType.appOpen,
+  );
+
+  static const articleNative = AdPlacement(
+    key: 'article_native',
+    type: AdType.native,
   );
 }
 ```
@@ -63,6 +73,15 @@ await FlutterAds.initialize(
       AppAdPlacements.resultBottomBanner: 'ca-app-pub-xxx/result_bottom_banner',
       AppAdPlacements.levelCompleteInterstitial: 'ca-app-pub-xxx/interstitial',
       AppAdPlacements.doubleReward: 'ca-app-pub-xxx/rewarded',
+      AppAdPlacements.levelBonusRewardedInterstitial:
+          'ca-app-pub-xxx/rewarded_interstitial',
+      AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
+    }),
+    nativeAdConfigs: NativeAdConfigs({
+      AppAdPlacements.articleNative: NativeAdConfig(
+        factoryId: 'article_native_factory',
+        height: 140,
+      ),
     }),
   consent: AdsConsentConfig(
     enabled: true,
@@ -127,7 +146,9 @@ await FlutterAds.load(AppAdPlacements.homeTopBanner);
 await FlutterAds.load(AppAdPlacements.resultBottomBanner);
 await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
 await FlutterAds.load(AppAdPlacements.doubleReward);
+await FlutterAds.load(AppAdPlacements.levelBonusRewardedInterstitial);
 await FlutterAds.load(AppAdPlacements.appOpen);
+await FlutterAds.load(AppAdPlacements.articleNative);
 ```
 
 Render a banner placement without importing Google Mobile Ads:
@@ -138,11 +159,33 @@ const AdsBanner(
 );
 ```
 
+Customize banner loading and error placeholders:
+
+```dart
+AdsBanner(
+  placement: AppAdPlacements.homeTopBanner,
+  loading: const AdsLoadingWidget(),
+  error: const SizedBox.shrink(),
+);
+```
+
 Or build the banner through the facade:
 
 ```dart
 FlutterAds.banner(AppAdPlacements.resultBottomBanner);
 ```
+
+Render a native ad placement:
+
+```dart
+const AdsNative(
+  placement: AppAdPlacements.articleNative,
+  loading: AdsLoadingWidget(height: 140),
+);
+```
+
+The host app must register the native ad factory matching `factoryId` on Android
+and iOS.
 
 Show fullscreen ads with the matching placement:
 
@@ -155,6 +198,13 @@ await FlutterAds.showRewarded(
   placement: AppAdPlacements.doubleReward,
   onRewardEarned: () {
     // Grant the reward here.
+  },
+);
+
+await FlutterAds.showRewardedInterstitial(
+  placement: AppAdPlacements.levelBonusRewardedInterstitial,
+  onRewardEarned: () {
+    // Grant the bonus reward here.
   },
 );
 ```
