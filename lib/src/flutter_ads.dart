@@ -9,11 +9,11 @@ import 'data/repositories/ads_repository_impl.dart';
 import 'domain/repositories/ads_repository.dart';
 import 'services/ads_service.dart';
 import 'services/google_ads_service.dart';
-import 'managers/google_consent_manager.dart';
+import 'consent/google_consent_manager.dart';
 
 /// Public entry-point used by applications to interact with ads.
-class FlutterAds {
-  FlutterAds._();
+class AppAds {
+  AppAds._();
 
   static AdsRepository? _repository;
 

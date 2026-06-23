@@ -7,13 +7,13 @@ import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
 import '../../domain/repositories/ads_repository.dart';
-import '../../managers/app_open_manager.dart';
-import '../../managers/banner_manager.dart';
-import '../../managers/consent_manager.dart';
-import '../../managers/interstitial_manager.dart';
-import '../../managers/native_manager.dart';
-import '../../managers/reward_manager.dart';
-import '../../managers/rewarded_interstitial_manager.dart';
+import '../../ads/app_open/app_open_manager.dart';
+import '../../ads/banner/banner_manager.dart';
+import '../../ads/interstitial/interstitial_manager.dart';
+import '../../ads/native/native_manager.dart';
+import '../../ads/rewarded/reward_manager.dart';
+import '../../ads/rewarded_interstitial/rewarded_interstitial_manager.dart';
+import '../../consent/consent_manager.dart';
 import '../../services/ads_service.dart';
 
 /// Default repository that coordinates app calls with ad managers.

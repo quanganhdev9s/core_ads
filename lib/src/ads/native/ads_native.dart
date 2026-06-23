@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-import '../core/config/ad_placement.dart';
-import '../core/results/ad_result.dart';
-import '../flutter_ads.dart';
-import 'ads_loading_widget.dart';
+import '../../core/config/ad_placement.dart';
+import '../../core/results/ad_result.dart';
+import '../../flutter_ads.dart';
+import '../../widgets/ads_loading_widget.dart';
 
 /// Widget that loads and renders a native ad for an app-defined placement.
 class AdsNative extends StatefulWidget {
@@ -42,14 +42,14 @@ class _AdsNativeState extends State<AdsNative> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = FlutterAds.load(widget.placement);
+    _loadFuture = AppAds.load(widget.placement);
   }
 
   @override
   void didUpdateWidget(covariant AdsNative oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
-      _loadFuture = FlutterAds.load(widget.placement);
+      _loadFuture = AppAds.load(widget.placement);
     }
   }
 
@@ -68,7 +68,7 @@ class _AdsNativeState extends State<AdsNative> {
           return widget.error ?? const SizedBox.shrink();
         }
 
-        return FlutterAds.nativeAd(widget.placement);
+        return AppAds.nativeAd(widget.placement);
       },
     );
   }

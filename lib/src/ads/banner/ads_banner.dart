@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-import '../core/config/ad_placement.dart';
-import '../core/results/ad_result.dart';
-import '../flutter_ads.dart';
-import 'ads_loading_widget.dart';
+import '../../core/config/ad_placement.dart';
+import '../../core/results/ad_result.dart';
+import '../../flutter_ads.dart';
+import '../../widgets/ads_loading_widget.dart';
 
 /// Widget that loads and renders a banner ad for an app-defined placement.
 class AdsBanner extends StatefulWidget {
@@ -42,14 +42,14 @@ class _AdsBannerState extends State<AdsBanner> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = FlutterAds.load(widget.placement);
+    _loadFuture = AppAds.load(widget.placement);
   }
 
   @override
   void didUpdateWidget(covariant AdsBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
-      _loadFuture = FlutterAds.load(widget.placement);
+      _loadFuture = AppAds.load(widget.placement);
     }
   }
 
@@ -68,7 +68,7 @@ class _AdsBannerState extends State<AdsBanner> {
           return widget.error ?? const SizedBox.shrink();
         }
 
-        return FlutterAds.banner(widget.placement);
+        return AppAds.banner(widget.placement);
       },
     );
   }

@@ -1,15 +1,15 @@
-import '../core/config/ad_placement.dart';
-import '../core/enums/ad_load_status.dart';
-import '../core/results/ad_failure.dart';
-import '../core/results/ad_result.dart';
-import '../services/ads_service.dart';
-import 'ad_manager.dart';
-import 'consent_manager.dart';
+import '../../core/config/ad_placement.dart';
+import '../../core/enums/ad_load_status.dart';
+import '../../core/results/ad_failure.dart';
+import '../../core/results/ad_result.dart';
+import '../../services/ads_service.dart';
+import '../../managers/ad_manager.dart';
+import '../../consent/consent_manager.dart';
 
-/// Manages native ad loading and cache state.
-class NativeManager implements AdManager {
-  /// Creates a native ad manager.
-  NativeManager({
+/// Manages banner ad loading and cache state.
+class BannerManager implements AdManager {
+  /// Creates a banner manager.
+  BannerManager({
     required this.service,
     required this.consentManager,
     required this.placement,
@@ -24,8 +24,8 @@ class NativeManager implements AdManager {
   @override
   AdLoadStatus get status => _status;
 
-  /// Whether a native ad is available for rendering.
-  bool get hasCachedNativeAd => _status == AdLoadStatus.ready;
+  /// Whether a banner is available to be reused.
+  bool get hasCachedBanner => _status == AdLoadStatus.ready;
 
   @override
   Future<AdResult<void>> load() async {
@@ -34,7 +34,7 @@ class NativeManager implements AdManager {
       return const AdResult.failure(AdFailure.consentDenied());
     }
 
-    if (hasCachedNativeAd) {
+    if (hasCachedBanner) {
       return const AdResult.success(null);
     }
 

@@ -1,4 +1,4 @@
-import 'ad_placement.dart';
+import '../../core/config/ad_placement.dart';
 
 /// Native ad rendering configuration for one placement.
 class NativeAdConfig {

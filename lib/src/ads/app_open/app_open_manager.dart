@@ -1,12 +1,12 @@
-import '../core/config/ad_placement.dart';
-import '../core/enums/ad_load_status.dart';
-import '../core/fullscreen/fullscreen_ad_cooldown_config.dart';
-import '../core/fullscreen/fullscreen_ad_controller.dart';
-import '../core/results/ad_failure.dart';
-import '../core/results/ad_result.dart';
-import '../services/ads_service.dart';
-import 'ad_manager.dart';
-import 'consent_manager.dart';
+import '../../core/config/ad_placement.dart';
+import '../../core/enums/ad_load_status.dart';
+import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
+import '../../core/fullscreen/fullscreen_ad_controller.dart';
+import '../../core/results/ad_failure.dart';
+import '../../core/results/ad_result.dart';
+import '../../services/ads_service.dart';
+import '../../managers/ad_manager.dart';
+import '../../consent/consent_manager.dart';
 
 /// Manages app open ad cache, expiration, and show flow.
 class AppOpenManager implements AdManager {

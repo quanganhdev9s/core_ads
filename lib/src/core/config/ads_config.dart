@@ -5,7 +5,7 @@ import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
 import 'ads_environment.dart';
-import 'native_ad_config.dart';
+import '../../ads/native/native_ad_config.dart';
 
 /// Runtime configuration for the ads package.
 class AdsConfig {
