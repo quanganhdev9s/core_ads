@@ -19,7 +19,7 @@ export 'src/core/fullscreen/fullscreen_ad_cooldown_config.dart';
 export 'src/core/fullscreen/fullscreen_ad_controller.dart';
 export 'src/core/results/ad_failure.dart';
 export 'src/core/results/ad_result.dart';
-export 'src/flutter_ads.dart';
+export 'src/app_ads.dart';
 export 'src/ads/app_open/ads_app_lifecycle_observer.dart';
 export 'src/ads/banner/ads_banner.dart';
 export 'src/ads/native/ads_native.dart';

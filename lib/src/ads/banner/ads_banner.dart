@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
 import '../../core/results/ad_result.dart';
-import '../../flutter_ads.dart';
+import '../../app_ads.dart';
 import '../../widgets/ads_loading_widget.dart';
 
 /// Widget that loads and renders a banner ad for an app-defined placement.

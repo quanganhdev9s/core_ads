@@ -12,18 +12,18 @@ import 'package:core_ads/core_ads.dart';
 ## API Summary
 
 ```dart
-FlutterAds.initialize(config);
-FlutterAds.load(placement);
-FlutterAds.banner(placement);
-FlutterAds.nativeAd(placement);
-FlutterAds.showInterstitial(placement);
-FlutterAds.showRewarded(placement: placement, onRewardEarned: () {});
-FlutterAds.showRewardedInterstitial(placement: placement, onRewardEarned: () {});
-FlutterAds.showAppOpen(placement);
-FlutterAds.handleAppResume(placement);
-FlutterAds.clear(placement);
-FlutterAds.clearType(type);
-FlutterAds.dispose();
+AppAds.initialize(config);
+AppAds.load(placement);
+AppAds.banner(placement);
+AppAds.nativeAd(placement);
+AppAds.showInterstitial(placement);
+AppAds.showRewarded(placement: placement, onRewardEarned: () {});
+AppAds.showRewardedInterstitial(placement: placement, onRewardEarned: () {});
+AppAds.showAppOpen(placement);
+AppAds.handleAppResume(placement);
+AppAds.clear(placement);
+AppAds.clearType(type);
+AppAds.dispose();
 ```
 
 ## Placements
@@ -71,7 +71,7 @@ unit IDs, cache, or analytics.
 ## Initialize
 
 ```dart
-await FlutterAds.initialize(
+await AppAds.initialize(
   AdsConfig(
     environment: AdsEnvironment.production,
     adUnitIds: AdUnitIds({
@@ -177,26 +177,26 @@ const AdsNative(
 Preload placements before showing:
 
 ```dart
-await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
-await FlutterAds.load(AppAdPlacements.doubleReward);
-await FlutterAds.load(AppAdPlacements.levelBonusRewardedInterstitial);
+await AppAds.load(AppAdPlacements.levelCompleteInterstitial);
+await AppAds.load(AppAdPlacements.doubleReward);
+await AppAds.load(AppAdPlacements.levelBonusRewardedInterstitial);
 ```
 
 Show fullscreen placements:
 
 ```dart
-await FlutterAds.showInterstitial(
+await AppAds.showInterstitial(
   AppAdPlacements.levelCompleteInterstitial,
 );
 
-await FlutterAds.showRewarded(
+await AppAds.showRewarded(
   placement: AppAdPlacements.doubleReward,
   onRewardEarned: () {
     // Grant reward here.
   },
 );
 
-await FlutterAds.showRewardedInterstitial(
+await AppAds.showRewardedInterstitial(
   placement: AppAdPlacements.levelBonusRewardedInterstitial,
   onRewardEarned: () {
     // Grant bonus reward here.
@@ -210,8 +210,8 @@ interstitial, and app open ads cannot show on top of each other.
 ## App Open
 
 ```dart
-await FlutterAds.load(AppAdPlacements.appOpen);
-await FlutterAds.showAppOpen(AppAdPlacements.appOpen);
+await AppAds.load(AppAdPlacements.appOpen);
+await AppAds.showAppOpen(AppAdPlacements.appOpen);
 ```
 
 Lifecycle helper:
@@ -228,7 +228,7 @@ adsLifecycleObserver.detach();
 Manual resume handling:
 
 ```dart
-await FlutterAds.handleAppResume(AppAdPlacements.appOpen);
+await AppAds.handleAppResume(AppAdPlacements.appOpen);
 ```
 
 ## Callbacks
@@ -258,19 +258,19 @@ or `showRewardedInterstitial` `onRewardEarned` callback.
 Clear one placement:
 
 ```dart
-await FlutterAds.clear(AppAdPlacements.levelCompleteInterstitial);
+await AppAds.clear(AppAdPlacements.levelCompleteInterstitial);
 ```
 
 Clear all cached ads for a type:
 
 ```dart
-await FlutterAds.clearType(AdType.interstitial);
+await AppAds.clearType(AdType.interstitial);
 ```
 
 Dispose all resources:
 
 ```dart
-await FlutterAds.dispose();
+await AppAds.dispose();
 ```
 
 ## Design Notes

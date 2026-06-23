@@ -17,7 +17,7 @@ class AppOpenManager implements AdManager {
     required this.placement,
     required this.fullscreenAdController,
     required this.fullscreenCooldown,
-    this.expiration = const Duration(hours: 4),
+    this.expiration = const Duration(minutes : 60),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 

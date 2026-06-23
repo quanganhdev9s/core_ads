@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
-import '../../flutter_ads.dart';
+import '../../app_ads.dart';
 
 /// Observes app lifecycle and handles app open ads on resume.
 class AdsAppLifecycleObserver with WidgetsBindingObserver {
