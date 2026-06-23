@@ -3,30 +3,38 @@
 A reusable Flutter ads package that keeps app code independent from ad network
 SDKs.
 
-The package exposes a small public API through `FlutterAds` and hides concrete
-SDK details behind managers and services.
-
-## AdPlacement
-
-`AdType` describes the ad format, such as banner, interstitial, rewarded, native,
-or app open.
-
-`AdPlacement` describes where or why that ad is used in your app. The package
-does not define placements for you, because placement names belong to each app.
-
-Define placements inside your application:
+Apps import only:
 
 ```dart
 import 'package:core_ads/core_ads.dart';
+```
 
+## API Summary
+
+```dart
+FlutterAds.initialize(config);
+FlutterAds.load(placement);
+FlutterAds.banner(placement);
+FlutterAds.nativeAd(placement);
+FlutterAds.showInterstitial(placement);
+FlutterAds.showRewarded(placement: placement, onRewardEarned: () {});
+FlutterAds.showRewardedInterstitial(placement: placement, onRewardEarned: () {});
+FlutterAds.showAppOpen(placement);
+FlutterAds.handleAppResume(placement);
+FlutterAds.clear(placement);
+FlutterAds.clearType(type);
+FlutterAds.dispose();
+```
+
+## Placements
+
+`AdType` describes the format. `AdPlacement` describes where that format is used
+in your app. Define placements in the host app:
+
+```dart
 class AppAdPlacements {
   static const homeTopBanner = AdPlacement(
     key: 'home_top_banner',
-    type: AdType.banner,
-  );
-
-  static const resultBottomBanner = AdPlacement(
-    key: 'result_bottom_banner',
     type: AdType.banner,
   );
 
@@ -57,24 +65,22 @@ class AppAdPlacements {
 }
 ```
 
-Use one `AdType.banner` for all banner ads, and create multiple placements when
-the app needs multiple banner positions.
+Use multiple placements for the same format only when the app needs separate ad
+unit IDs, cache, or analytics.
 
 ## Initialize
-
-Pass ad unit IDs as a map from app-defined placement to ad unit ID:
 
 ```dart
 await FlutterAds.initialize(
   AdsConfig(
     environment: AdsEnvironment.production,
     adUnitIds: AdUnitIds({
-      AppAdPlacements.homeTopBanner: 'ca-app-pub-xxx/home_top_banner',
-      AppAdPlacements.resultBottomBanner: 'ca-app-pub-xxx/result_bottom_banner',
+      AppAdPlacements.homeTopBanner: 'ca-app-pub-xxx/banner',
       AppAdPlacements.levelCompleteInterstitial: 'ca-app-pub-xxx/interstitial',
       AppAdPlacements.doubleReward: 'ca-app-pub-xxx/rewarded',
       AppAdPlacements.levelBonusRewardedInterstitial:
           'ca-app-pub-xxx/rewarded_interstitial',
+      AppAdPlacements.appOpen: 'ca-app-pub-xxx/app_open',
       AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
     }),
     nativeAdConfigs: NativeAdConfigs({
@@ -89,53 +95,32 @@ await FlutterAds.initialize(
       interstitialAppOpenInterval: Duration(seconds: 7),
     ),
     consent: AdsConsentConfig(
-    enabled: true,
-    tagForUnderAgeOfConsent: false,
-    requestTrackingAuthorizationOnIos: true,
-  ),
+      enabled: true,
+      tagForUnderAgeOfConsent: false,
+      requestTrackingAuthorizationOnIos: true,
+    ),
     request: AdsRequestConfig(
       maxAdContentRating: AdsMaxAdContentRating.t,
       tagForChildDirectedTreatment: false,
       tagForUnderAgeOfConsent: false,
-    ),
-    callbacks: AdsCallbacks(
-      onLoaded: (event) {
-        // Log loaded event.
-      },
-      onFailed: (event) {
-        // Log event.failure.
-      },
-      onImpression: (event) {
-        // Log impression.
-      },
-      onPaid: (event) {
-        // Log ad revenue using event.valueMicros and event.currencyCode.
-      },
-      onRewardEarned: (event) {
-        // Log reward analytics. Grant rewards in show callbacks.
-      },
     ),
     enableDebugLogs: true,
   ),
 );
 ```
 
-For consent testing, configure debug geography and test device IDs from the app:
+## Consent And ATT
+
+Google UMP runs during initialization when consent is enabled. Ads are only
+requested when `canRequestAds` allows it.
+
+For consent testing:
 
 ```dart
-AdsConfig(
-  environment: AdsEnvironment.test,
-  adUnitIds: AdUnitIds({
-    AppAdPlacements.homeTopBanner: 'ca-app-pub-xxx/test_banner',
-  }),
-  consent: AdsConsentConfig(
-    debugGeography: AdsConsentDebugGeography.eea,
-    testDeviceIds: ['TEST_DEVICE_ID'],
-    resetOnInitialize: true,
-  ),
-  request: AdsRequestConfig(
-    testDeviceIds: ['TEST_DEVICE_ID'],
-  ),
+AdsConsentConfig(
+  debugGeography: AdsConsentDebugGeography.eea,
+  testDeviceIds: ['TEST_DEVICE_ID'],
+  resetOnInitialize: true,
 );
 ```
 
@@ -149,31 +134,15 @@ On iOS, ATT is requested after UMP consent allows ads. The host app must add
 <string>This identifier will be used to deliver personalized ads to you.</string>
 ```
 
-If the app shows another native permission dialog during first launch, consider
-delaying ads initialization or increasing `trackingAuthorizationDelay`:
+If another native permission dialog appears during first launch, adjust:
 
 ```dart
 AdsConsentConfig(
-  requestTrackingAuthorizationOnIos: true,
   trackingAuthorizationDelay: Duration(milliseconds: 500),
 );
 ```
 
-## Load And Show
-
-Load each placement independently:
-
-```dart
-await FlutterAds.load(AppAdPlacements.homeTopBanner);
-await FlutterAds.load(AppAdPlacements.resultBottomBanner);
-await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
-await FlutterAds.load(AppAdPlacements.doubleReward);
-await FlutterAds.load(AppAdPlacements.levelBonusRewardedInterstitial);
-await FlutterAds.load(AppAdPlacements.appOpen);
-await FlutterAds.load(AppAdPlacements.articleNative);
-```
-
-Render a banner placement without importing Google Mobile Ads:
+## Banner
 
 ```dart
 const AdsBanner(
@@ -181,7 +150,7 @@ const AdsBanner(
 );
 ```
 
-Customize banner loading and error placeholders:
+With custom placeholders:
 
 ```dart
 AdsBanner(
@@ -191,13 +160,10 @@ AdsBanner(
 );
 ```
 
-Or build the banner through the facade:
+## Native
 
-```dart
-FlutterAds.banner(AppAdPlacements.resultBottomBanner);
-```
-
-Render a native ad placement:
+The host app must register the native ad factory matching the placement
+`factoryId` on Android and iOS.
 
 ```dart
 const AdsNative(
@@ -206,10 +172,17 @@ const AdsNative(
 );
 ```
 
-The host app must register the native ad factory matching `factoryId` on Android
-and iOS.
+## Fullscreen Ads
 
-Show fullscreen ads with the matching placement:
+Preload placements before showing:
+
+```dart
+await FlutterAds.load(AppAdPlacements.levelCompleteInterstitial);
+await FlutterAds.load(AppAdPlacements.doubleReward);
+await FlutterAds.load(AppAdPlacements.levelBonusRewardedInterstitial);
+```
+
+Show fullscreen placements:
 
 ```dart
 await FlutterAds.showInterstitial(
@@ -219,19 +192,29 @@ await FlutterAds.showInterstitial(
 await FlutterAds.showRewarded(
   placement: AppAdPlacements.doubleReward,
   onRewardEarned: () {
-    // Grant the reward here.
+    // Grant reward here.
   },
 );
 
 await FlutterAds.showRewardedInterstitial(
   placement: AppAdPlacements.levelBonusRewardedInterstitial,
   onRewardEarned: () {
-    // Grant the bonus reward here.
+    // Grant bonus reward here.
   },
 );
 ```
 
-Handle app open ads when the app resumes:
+Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
+interstitial, and app open ads cannot show on top of each other.
+
+## App Open
+
+```dart
+await FlutterAds.load(AppAdPlacements.appOpen);
+await FlutterAds.showAppOpen(AppAdPlacements.appOpen);
+```
+
+Lifecycle helper:
 
 ```dart
 final adsLifecycleObserver = AdsAppLifecycleObserver(
@@ -239,26 +222,52 @@ final adsLifecycleObserver = AdsAppLifecycleObserver(
 );
 
 adsLifecycleObserver.attach();
-
-// Later, when the app no longer needs ads lifecycle handling:
 adsLifecycleObserver.detach();
 ```
 
-You can also call the resume handler manually:
+Manual resume handling:
 
 ```dart
 await FlutterAds.handleAppResume(AppAdPlacements.appOpen);
 ```
 
-Clear cached ads when a placement or type is no longer needed:
+## Callbacks
+
+```dart
+AdsConfig(
+  environment: AdsEnvironment.production,
+  adUnitIds: AdUnitIds({}),
+  callbacks: AdsCallbacks(
+    onLoaded: (event) {},
+    onFailed: (event) {},
+    onShown: (event) {},
+    onDismissed: (event) {},
+    onClicked: (event) {},
+    onImpression: (event) {},
+    onPaid: (event) {},
+    onRewardEarned: (event) {},
+  ),
+);
+```
+
+Use `onPaid` for ad revenue analytics. Grant rewards inside the `showRewarded`
+or `showRewardedInterstitial` `onRewardEarned` callback.
+
+## Clear And Dispose
+
+Clear one placement:
 
 ```dart
 await FlutterAds.clear(AppAdPlacements.levelCompleteInterstitial);
+```
 
+Clear all cached ads for a type:
+
+```dart
 await FlutterAds.clearType(AdType.interstitial);
 ```
 
-Dispose resources when the app no longer needs ads:
+Dispose all resources:
 
 ```dart
 await FlutterAds.dispose();
@@ -266,10 +275,7 @@ await FlutterAds.dispose();
 
 ## Design Notes
 
-- App code should depend on `core_ads`, not Google Mobile Ads directly.
-- The package uses `AdPlacement` instead of raw strings for safer app-defined ad
-  slots.
+- Public app code should not import Google Mobile Ads directly.
+- The package uses `AdPlacement` instead of raw strings for app-defined slots.
 - Managers own ad lifecycle per placement.
-- Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
-  interstitial, and app open ads cannot show on top of each other.
-- Reward callbacks should only grant rewards from the SDK reward callback.
+- Reward callbacks are only emitted from SDK reward callbacks.
