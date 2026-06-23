@@ -1,5 +1,6 @@
 import '../core/config/ad_placement.dart';
 import '../core/enums/ad_load_status.dart';
+import '../core/fullscreen/fullscreen_ad_controller.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../services/ads_service.dart';
@@ -13,11 +14,13 @@ class RewardedInterstitialManager implements AdManager {
     required this.service,
     required this.consentManager,
     required this.placement,
+    required this.fullscreenAdController,
   });
 
   final AdsService service;
   final ConsentManager consentManager;
   final AdPlacement placement;
+  final FullscreenAdController fullscreenAdController;
 
   AdLoadStatus _status = AdLoadStatus.idle;
 
@@ -44,10 +47,20 @@ class RewardedInterstitialManager implements AdManager {
       return const AdResult.failure(AdFailure.notReady());
     }
 
-    final result = await service.showRewardedInterstitial(
-      placement: placement,
-      onRewardEarned: onRewardEarned,
-    );
+    final lockResult = fullscreenAdController.tryAcquire(placement);
+    if (lockResult.isFailure) {
+      return lockResult;
+    }
+
+    final AdResult<void> result;
+    try {
+      result = await service.showRewardedInterstitial(
+        placement: placement,
+        onRewardEarned: onRewardEarned,
+      );
+    } finally {
+      fullscreenAdController.release(placement);
+    }
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
     if (result.isSuccess) {

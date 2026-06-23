@@ -1,5 +1,7 @@
 import '../core/config/ad_placement.dart';
 import '../core/enums/ad_load_status.dart';
+import '../core/fullscreen/fullscreen_ad_cooldown_config.dart';
+import '../core/fullscreen/fullscreen_ad_controller.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../services/ads_service.dart';
@@ -13,6 +15,8 @@ class AppOpenManager implements AdManager {
     required this.service,
     required this.consentManager,
     required this.placement,
+    required this.fullscreenAdController,
+    required this.fullscreenCooldown,
     this.expiration = const Duration(hours: 4),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
@@ -20,6 +24,8 @@ class AppOpenManager implements AdManager {
   final AdsService service;
   final ConsentManager consentManager;
   final AdPlacement placement;
+  final FullscreenAdController fullscreenAdController;
+  final FullscreenAdCooldownConfig fullscreenCooldown;
   final Duration expiration;
   final DateTime Function() _now;
 
@@ -83,12 +89,31 @@ class AppOpenManager implements AdManager {
       );
     }
 
+    final cooldownResult = fullscreenAdController.canShow(
+      placement,
+      fullscreenCooldown,
+    );
+    if (cooldownResult.isFailure) {
+      return cooldownResult;
+    }
+
+    final lockResult = fullscreenAdController.tryAcquire(placement);
+    if (lockResult.isFailure) {
+      return lockResult;
+    }
+
     _isShowing = true;
-    final result = await service.show(placement);
-    _isShowing = false;
+    final AdResult<void> result;
+    try {
+      result = await service.show(placement);
+    } finally {
+      _isShowing = false;
+      fullscreenAdController.release(placement);
+    }
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
     if (result.isSuccess) {
+      fullscreenAdController.markShown(placement);
       await load();
     }
 

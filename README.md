@@ -83,7 +83,12 @@ await FlutterAds.initialize(
         height: 140,
       ),
     }),
-  consent: AdsConsentConfig(
+    fullscreenCooldown: FullscreenAdCooldownConfig(
+      interstitialInterval: Duration(seconds: 7),
+      appOpenInterval: Duration(seconds: 7),
+      interstitialAppOpenInterval: Duration(seconds: 7),
+    ),
+    consent: AdsConsentConfig(
     enabled: true,
     tagForUnderAgeOfConsent: false,
     requestTrackingAuthorizationOnIos: true,
@@ -257,4 +262,6 @@ await FlutterAds.dispose();
 - The package uses `AdPlacement` instead of raw strings for safer app-defined ad
   slots.
 - Managers own ad lifecycle per placement.
+- Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
+  interstitial, and app open ads cannot show on top of each other.
 - Reward callbacks should only grant rewards from the SDK reward callback.

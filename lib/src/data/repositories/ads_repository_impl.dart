@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/config/ad_placement.dart';
 import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
+import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
 import '../../domain/repositories/ads_repository.dart';
@@ -22,7 +23,10 @@ class AdsRepositoryImpl implements AdsRepository {
     required this.config,
     required this.service,
     ConsentManager? consentManager,
-  }) : consentManager = consentManager ?? ConsentManager();
+    FullscreenAdController? fullscreenAdController,
+  }) : consentManager = consentManager ?? ConsentManager(),
+       fullscreenAdController =
+           fullscreenAdController ?? FullscreenAdController();
 
   /// Runtime ads configuration.
   final AdsConfig config;
@@ -32,6 +36,9 @@ class AdsRepositoryImpl implements AdsRepository {
 
   /// Consent lifecycle manager.
   final ConsentManager consentManager;
+
+  /// Shared fullscreen ad controller.
+  final FullscreenAdController fullscreenAdController;
 
   final Map<AdPlacement, BannerManager> _bannerManagers = {};
   final Map<AdPlacement, InterstitialManager> _interstitialManagers = {};
@@ -167,6 +174,8 @@ class AdsRepositoryImpl implements AdsRepository {
         service: service,
         consentManager: consentManager,
         placement: placement,
+        fullscreenAdController: fullscreenAdController,
+        fullscreenCooldown: config.fullscreenCooldown,
       ),
     );
   }
@@ -178,6 +187,7 @@ class AdsRepositoryImpl implements AdsRepository {
         service: service,
         consentManager: consentManager,
         placement: placement,
+        fullscreenAdController: fullscreenAdController,
       ),
     );
   }
@@ -191,6 +201,7 @@ class AdsRepositoryImpl implements AdsRepository {
         service: service,
         consentManager: consentManager,
         placement: placement,
+        fullscreenAdController: fullscreenAdController,
       ),
     );
   }
@@ -202,6 +213,8 @@ class AdsRepositoryImpl implements AdsRepository {
         service: service,
         consentManager: consentManager,
         placement: placement,
+        fullscreenAdController: fullscreenAdController,
+        fullscreenCooldown: config.fullscreenCooldown,
       ),
     );
   }
@@ -248,6 +261,7 @@ class AdsRepositoryImpl implements AdsRepository {
     _rewardedInterstitialManagers.clear();
     _appOpenManagers.clear();
     _nativeManagers.clear();
+    fullscreenAdController.reset();
 
     await service.dispose();
   }
