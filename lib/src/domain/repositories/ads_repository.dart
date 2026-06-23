@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
+import '../../core/enums/ad_type.dart';
 import '../../core/results/ad_result.dart';
 
 /// Public domain contract for ads operations.
@@ -37,6 +38,12 @@ abstract interface class AdsRepository {
 
   /// Handles an app resume event for an app open ad placement.
   Future<AdResult<void>> handleAppResume(AdPlacement placement);
+
+  /// Clears cached ad resources for [placement].
+  Future<void> clear(AdPlacement placement);
+
+  /// Clears cached ad resources for all placements of [type].
+  Future<void> clearType(AdType type);
 
   /// Disposes all managed ads resources.
   Future<void> dispose();

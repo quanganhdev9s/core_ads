@@ -156,6 +156,44 @@ class AdsRepositoryImpl implements AdsRepository {
     return _appOpenManager(placement).handleAppResume();
   }
 
+  @override
+  Future<void> clear(AdPlacement placement) async {
+    switch (placement.type) {
+      case AdType.banner:
+        await _bannerManagers.remove(placement)?.dispose();
+      case AdType.interstitial:
+        await _interstitialManagers.remove(placement)?.dispose();
+      case AdType.rewarded:
+        await _rewardManagers.remove(placement)?.dispose();
+      case AdType.rewardedInterstitial:
+        await _rewardedInterstitialManagers.remove(placement)?.dispose();
+      case AdType.appOpen:
+        await _appOpenManagers.remove(placement)?.dispose();
+      case AdType.native:
+        await _nativeManagers.remove(placement)?.dispose();
+    }
+
+    await service.clear(placement);
+  }
+
+  @override
+  Future<void> clearType(AdType type) async {
+    final placements = <AdPlacement>{
+      ..._bannerManagers.keys,
+      ..._interstitialManagers.keys,
+      ..._rewardManagers.keys,
+      ..._rewardedInterstitialManagers.keys,
+      ..._appOpenManagers.keys,
+      ..._nativeManagers.keys,
+    }.where((placement) => placement.type == type).toList();
+
+    for (final placement in placements) {
+      await clear(placement);
+    }
+
+    await service.clearType(type);
+  }
+
   BannerManager _bannerManager(AdPlacement placement) {
     return _bannerManagers.putIfAbsent(
       placement,

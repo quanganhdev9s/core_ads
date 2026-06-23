@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
+import '../core/enums/ad_type.dart';
 import '../core/results/ad_result.dart';
 
 /// SDK-facing contract implemented by concrete ad network services.
@@ -34,6 +35,12 @@ abstract interface class AdsService {
 
   /// Builds a native ad widget for [placement].
   Widget nativeAd(AdPlacement placement);
+
+  /// Clears cached ad resources for [placement].
+  Future<void> clear(AdPlacement placement);
+
+  /// Clears cached ad resources for all placements of [type].
+  Future<void> clearType(AdType type);
 
   /// Disposes resources owned by this service.
   Future<void> dispose();

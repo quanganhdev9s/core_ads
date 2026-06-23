@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
+import 'core/enums/ad_type.dart';
 import 'core/results/ad_failure.dart';
 import 'core/results/ad_result.dart';
 import 'data/repositories/ads_repository_impl.dart';
@@ -139,6 +140,16 @@ class FlutterAds {
     }
 
     return repository.nativeAd(placement);
+  }
+
+  /// Clears cached ad resources for [placement].
+  static Future<void> clear(AdPlacement placement) async {
+    await _repository?.clear(placement);
+  }
+
+  /// Clears cached ad resources for all placements of [type].
+  static Future<void> clearType(AdType type) async {
+    await _repository?.clearType(type);
   }
 
   /// Disposes ads resources.

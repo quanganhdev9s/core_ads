@@ -243,6 +243,42 @@ class GoogleAdsService implements AdsService {
     );
   }
 
+  @override
+  Future<void> clear(AdPlacement placement) async {
+    switch (placement.type) {
+      case AdType.banner:
+        _bannerAds.remove(placement)?.dispose();
+      case AdType.interstitial:
+        _interstitialAds.remove(placement)?.dispose();
+      case AdType.rewarded:
+        _rewardedAds.remove(placement)?.dispose();
+      case AdType.rewardedInterstitial:
+        _rewardedInterstitialAds.remove(placement)?.dispose();
+      case AdType.native:
+        _nativeAds.remove(placement)?.dispose();
+      case AdType.appOpen:
+        _appOpenAds.remove(placement)?.dispose();
+    }
+  }
+
+  @override
+  Future<void> clearType(AdType type) async {
+    switch (type) {
+      case AdType.banner:
+        _disposeAll(_bannerAds);
+      case AdType.interstitial:
+        _disposeAll(_interstitialAds);
+      case AdType.rewarded:
+        _disposeAll(_rewardedAds);
+      case AdType.rewardedInterstitial:
+        _disposeAll(_rewardedInterstitialAds);
+      case AdType.native:
+        _disposeAll(_nativeAds);
+      case AdType.appOpen:
+        _disposeAll(_appOpenAds);
+    }
+  }
+
   Future<AdResult<void>> _loadBanner(AdPlacement placement) async {
     final adUnitId = _adUnitIdFor(placement);
     if (adUnitId == null) {
@@ -539,6 +575,13 @@ class GoogleAdsService implements AdsService {
 
   String? _adUnitIdFor(AdPlacement placement) {
     return _config?.adUnitIds.idFor(placement);
+  }
+
+  void _disposeAll<T extends Ad>(Map<AdPlacement, T> ads) {
+    for (final ad in ads.values) {
+      ad.dispose();
+    }
+    ads.clear();
   }
 
   void _emitLoaded(AdPlacement placement) {

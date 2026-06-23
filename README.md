@@ -250,6 +250,14 @@ You can also call the resume handler manually:
 await FlutterAds.handleAppResume(AppAdPlacements.appOpen);
 ```
 
+Clear cached ads when a placement or type is no longer needed:
+
+```dart
+await FlutterAds.clear(AppAdPlacements.levelCompleteInterstitial);
+
+await FlutterAds.clearType(AdType.interstitial);
+```
+
 Dispose resources when the app no longer needs ads:
 
 ```dart

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/enums/ad_load_status.dart';
+import '../core/enums/ad_type.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
@@ -105,6 +106,16 @@ class MemoryAdsService implements AdsService {
   @override
   Widget nativeAd(AdPlacement placement) {
     return const SizedBox.shrink();
+  }
+
+  @override
+  Future<void> clear(AdPlacement placement) async {
+    _statuses.remove(placement);
+  }
+
+  @override
+  Future<void> clearType(AdType type) async {
+    _statuses.removeWhere((placement, _) => placement.type == type);
   }
 
   @override
