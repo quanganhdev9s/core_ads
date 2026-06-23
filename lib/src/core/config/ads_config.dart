@@ -1,4 +1,5 @@
 import '../enums/ad_network.dart';
+import '../events/ads_callbacks.dart';
 import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
@@ -15,6 +16,7 @@ class AdsConfig {
     this.consent = const AdsConsentConfig(),
     this.request = const AdsRequestConfig(),
     this.nativeAdConfigs = const NativeAdConfigs({}),
+    this.callbacks = const AdsCallbacks(),
     this.enableDebugLogs = false,
   });
 
@@ -35,6 +37,9 @@ class AdsConfig {
 
   /// Native ad rendering configuration by placement.
   final NativeAdConfigs nativeAdConfigs;
+
+  /// Lifecycle and analytics callbacks.
+  final AdsCallbacks callbacks;
 
   /// Whether internal debug logging is enabled.
   final bool enableDebugLogs;

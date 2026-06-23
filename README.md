@@ -93,6 +93,23 @@ await FlutterAds.initialize(
       tagForChildDirectedTreatment: false,
       tagForUnderAgeOfConsent: false,
     ),
+    callbacks: AdsCallbacks(
+      onLoaded: (event) {
+        // Log loaded event.
+      },
+      onFailed: (event) {
+        // Log event.failure.
+      },
+      onImpression: (event) {
+        // Log impression.
+      },
+      onPaid: (event) {
+        // Log ad revenue using event.valueMicros and event.currencyCode.
+      },
+      onRewardEarned: (event) {
+        // Log reward analytics. Grant rewards in show callbacks.
+      },
+    ),
     enableDebugLogs: true,
   ),
 );

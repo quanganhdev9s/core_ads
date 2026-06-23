@@ -7,6 +7,11 @@ import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/config/ads_request_config.dart';
 import '../core/enums/ad_type.dart';
+import '../core/enums/ad_network.dart';
+import '../core/events/ads_event.dart';
+import '../core/events/ads_failure_event.dart';
+import '../core/events/ads_paid_event.dart';
+import '../core/events/ads_reward_event.dart';
 import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
@@ -133,6 +138,7 @@ class GoogleAdsService implements AdsService {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _rewardedAds.remove(placement);
+        _emitDismissed(placement);
         if (!completer.isCompleted) {
           completer.complete(const AdResult.success(null));
         }
@@ -140,15 +146,20 @@ class GoogleAdsService implements AdsService {
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _rewardedAds.remove(placement);
+        _emitFailed(placement, _mapAdError(error));
         if (!completer.isCompleted) {
           completer.complete(AdResult.failure(_mapAdError(error)));
         }
       },
+      onAdShowedFullScreenContent: (_) => _emitShown(placement),
+      onAdImpression: (_) => _emitImpression(placement),
+      onAdClicked: (_) => _emitClicked(placement),
     );
 
     ad.show(
       onUserEarnedReward: (_, reward) {
         _logger.log('Reward earned: ${reward.amount} ${reward.type}');
+        _emitReward(placement, reward);
         onRewardEarned();
       },
     );
@@ -172,6 +183,7 @@ class GoogleAdsService implements AdsService {
           onAdDismissedFullScreenContent: (ad) {
             ad.dispose();
             _rewardedInterstitialAds.remove(placement);
+            _emitDismissed(placement);
             if (!completer.isCompleted) {
               completer.complete(const AdResult.success(null));
             }
@@ -179,10 +191,14 @@ class GoogleAdsService implements AdsService {
           onAdFailedToShowFullScreenContent: (ad, error) {
             ad.dispose();
             _rewardedInterstitialAds.remove(placement);
+            _emitFailed(placement, _mapAdError(error));
             if (!completer.isCompleted) {
               completer.complete(AdResult.failure(_mapAdError(error)));
             }
           },
+          onAdShowedFullScreenContent: (_) => _emitShown(placement),
+          onAdImpression: (_) => _emitImpression(placement),
+          onAdClicked: (_) => _emitClicked(placement),
         );
 
     await ad.show(
@@ -190,6 +206,7 @@ class GoogleAdsService implements AdsService {
         _logger.log(
           'Rewarded interstitial reward earned: ${reward.amount} ${reward.type}',
         );
+        _emitReward(placement, reward);
         onRewardEarned();
       },
     );
@@ -243,13 +260,20 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _bannerAds[placement] = ad as BannerAd;
           _logger.log('${placement.key} banner loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           _bannerAds.remove(placement);
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
+        onAdImpression: (_) => _emitImpression(placement),
+        onAdClicked: (_) => _emitClicked(placement),
+        onPaidEvent: (_, valueMicros, precision, currencyCode) =>
+            _emitPaid(placement, valueMicros, precision, currencyCode),
       ),
     );
 
@@ -285,13 +309,20 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _nativeAds[placement] = ad as NativeAd;
           _logger.log('${placement.key} native loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           _nativeAds.remove(placement);
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
+        onAdImpression: (_) => _emitImpression(placement),
+        onAdClicked: (_) => _emitClicked(placement),
+        onPaidEvent: (_, valueMicros, precision, currencyCode) =>
+            _emitPaid(placement, valueMicros, precision, currencyCode),
       ),
     );
 
@@ -315,10 +346,13 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _interstitialAds[placement] = ad;
           _logger.log('${placement.key} interstitial loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (error) {
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
       ),
     );
@@ -342,10 +376,13 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _rewardedAds[placement] = ad;
           _logger.log('${placement.key} rewarded loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (error) {
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
       ),
     );
@@ -369,10 +406,13 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _rewardedInterstitialAds[placement] = ad;
           _logger.log('${placement.key} rewarded interstitial loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (error) {
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
       ),
     );
@@ -396,10 +436,13 @@ class GoogleAdsService implements AdsService {
         onAdLoaded: (ad) {
           _appOpenAds[placement] = ad;
           _logger.log('${placement.key} app open loaded');
+          _emitLoaded(placement);
           completer.complete(const AdResult.success(null));
         },
         onAdFailedToLoad: (error) {
-          completer.complete(AdResult.failure(_mapAdError(error)));
+          final failure = _mapAdError(error);
+          _emitFailed(placement, failure);
+          completer.complete(AdResult.failure(failure));
         },
       ),
     );
@@ -418,6 +461,7 @@ class GoogleAdsService implements AdsService {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _interstitialAds.remove(placement);
+        _emitDismissed(placement);
         if (!completer.isCompleted) {
           completer.complete(const AdResult.success(null));
         }
@@ -425,10 +469,14 @@ class GoogleAdsService implements AdsService {
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _interstitialAds.remove(placement);
+        _emitFailed(placement, _mapAdError(error));
         if (!completer.isCompleted) {
           completer.complete(AdResult.failure(_mapAdError(error)));
         }
       },
+      onAdShowedFullScreenContent: (_) => _emitShown(placement),
+      onAdImpression: (_) => _emitImpression(placement),
+      onAdClicked: (_) => _emitClicked(placement),
     );
 
     ad.show();
@@ -446,6 +494,7 @@ class GoogleAdsService implements AdsService {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _appOpenAds.remove(placement);
+        _emitDismissed(placement);
         if (!completer.isCompleted) {
           completer.complete(const AdResult.success(null));
         }
@@ -453,10 +502,14 @@ class GoogleAdsService implements AdsService {
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
         _appOpenAds.remove(placement);
+        _emitFailed(placement, _mapAdError(error));
         if (!completer.isCompleted) {
           completer.complete(AdResult.failure(_mapAdError(error)));
         }
       },
+      onAdShowedFullScreenContent: (_) => _emitShown(placement),
+      onAdImpression: (_) => _emitImpression(placement),
+      onAdClicked: (_) => _emitClicked(placement),
     );
 
     ad.show();
@@ -486,6 +539,68 @@ class GoogleAdsService implements AdsService {
 
   String? _adUnitIdFor(AdPlacement placement) {
     return _config?.adUnitIds.idFor(placement);
+  }
+
+  void _emitLoaded(AdPlacement placement) {
+    _config?.callbacks.onLoaded?.call(_event(placement));
+  }
+
+  void _emitFailed(AdPlacement placement, AdFailure failure) {
+    _config?.callbacks.onFailed?.call(
+      AdsFailureEvent(
+        placement: placement,
+        network: AdNetwork.google,
+        failure: failure,
+      ),
+    );
+  }
+
+  void _emitShown(AdPlacement placement) {
+    _config?.callbacks.onShown?.call(_event(placement));
+  }
+
+  void _emitDismissed(AdPlacement placement) {
+    _config?.callbacks.onDismissed?.call(_event(placement));
+  }
+
+  void _emitClicked(AdPlacement placement) {
+    _config?.callbacks.onClicked?.call(_event(placement));
+  }
+
+  void _emitImpression(AdPlacement placement) {
+    _config?.callbacks.onImpression?.call(_event(placement));
+  }
+
+  void _emitPaid(
+    AdPlacement placement,
+    double valueMicros,
+    PrecisionType precision,
+    String currencyCode,
+  ) {
+    _config?.callbacks.onPaid?.call(
+      AdsPaidEvent(
+        placement: placement,
+        network: AdNetwork.google,
+        valueMicros: valueMicros,
+        currencyCode: currencyCode,
+        precision: precision.name,
+      ),
+    );
+  }
+
+  void _emitReward(AdPlacement placement, RewardItem reward) {
+    _config?.callbacks.onRewardEarned?.call(
+      AdsRewardEvent(
+        placement: placement,
+        network: AdNetwork.google,
+        amount: reward.amount,
+        rewardType: reward.type,
+      ),
+    );
+  }
+
+  AdsEvent _event(AdPlacement placement) {
+    return AdsEvent(placement: placement, network: AdNetwork.google);
   }
 
   AdFailure _mapAdError(AdError error) {
