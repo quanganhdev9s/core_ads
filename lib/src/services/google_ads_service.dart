@@ -324,7 +324,6 @@ class GoogleAdsService implements AdsService {
           ad.dispose();
           _bannerAds.remove(placement);
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
         onAdImpression: (_) => _emitImpression(placement),
@@ -387,7 +386,6 @@ class GoogleAdsService implements AdsService {
           ad.dispose();
           _nativeAds.remove(placement);
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
         onAdImpression: (_) => _emitImpression(placement),
@@ -397,8 +395,16 @@ class GoogleAdsService implements AdsService {
       ),
     );
 
-    await nativeAd.load();
-    return completer.future;
+    try {
+      await nativeAd.load();
+      return completer.future;
+    } catch (error) {
+      nativeAd.dispose();
+      _nativeAds.remove(placement);
+      return AdResult.failure(
+        AdFailure.unknown('Failed to load native ad', error),
+      );
+    }
   }
 
   Future<AdResult<void>> _loadInterstitial(AdPlacement placement) {
@@ -422,7 +428,6 @@ class GoogleAdsService implements AdsService {
         },
         onAdFailedToLoad: (error) {
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
       ),
@@ -452,7 +457,6 @@ class GoogleAdsService implements AdsService {
         },
         onAdFailedToLoad: (error) {
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
       ),
@@ -482,7 +486,6 @@ class GoogleAdsService implements AdsService {
         },
         onAdFailedToLoad: (error) {
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
       ),
@@ -512,7 +515,6 @@ class GoogleAdsService implements AdsService {
         },
         onAdFailedToLoad: (error) {
           final failure = _mapAdError(error);
-          _emitFailed(placement, failure);
           completer.complete(AdResult.failure(failure));
         },
       ),

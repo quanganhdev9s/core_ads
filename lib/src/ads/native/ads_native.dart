@@ -63,6 +63,10 @@ class _AdsNativeState extends State<AdsNative> {
               AdsLoadingWidget(width: widget.width, height: widget.height);
         }
 
+        if (snapshot.hasError) {
+          return widget.error ?? const SizedBox.shrink();
+        }
+
         final result = snapshot.data;
         if (result == null || result.isFailure) {
           return widget.error ?? const SizedBox.shrink();

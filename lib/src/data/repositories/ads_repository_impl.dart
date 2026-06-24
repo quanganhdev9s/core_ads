@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/config/ad_placement.dart';
 import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
+import '../../core/events/ads_failure_event.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
@@ -72,8 +73,8 @@ class AdsRepositoryImpl implements AdsRepository {
   Future<AdResult<void>> load(
     AdPlacement placement, {
     BannerAdConfig? bannerConfig,
-  }) {
-    return switch (placement.type) {
+  }) async {
+    final result = await switch (placement.type) {
       AdType.banner => _bannerManager(placement).load(config: bannerConfig),
       AdType.interstitial => _interstitialManager(placement).load(),
       AdType.rewarded => _rewardManager(placement).load(),
@@ -83,6 +84,9 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.native => _nativeManager(placement).load(),
       AdType.appOpen => _appOpenManager(placement).load(),
     };
+
+    _emitLoadFailure(placement, result);
+    return result;
   }
 
   @override
@@ -280,6 +284,18 @@ class AdsRepositoryImpl implements AdsRepository {
             'Placement ${placement.key} uses ${placement.type.name}, expected ${expectedType.name}.',
       ),
     );
+  }
+
+  void _emitLoadFailure(AdPlacement placement, AdResult<void> result) {
+    if (result case AdFailed<void>(failure: final failure)) {
+      config.callbacks.onFailed?.call(
+        AdsFailureEvent(
+          placement: placement,
+          network: config.network,
+          failure: failure,
+        ),
+      );
+    }
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:core_ads/core_ads.dart';
 import 'package:flutter/material.dart';
 
@@ -43,6 +45,44 @@ class ExamplePlacements {
 
 class ExampleAdConfigs {
   static const banner = BannerAdConfig.anchoredAdaptive();
+}
+
+class ExampleAdUnitIds {
+  static String get banner {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/2934735716'
+        : 'ca-app-pub-3940256099942544/6300978111';
+  }
+
+  static String get interstitial {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/4411468910'
+        : 'ca-app-pub-3940256099942544/1033173712';
+  }
+
+  static String get rewarded {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/1712485313'
+        : 'ca-app-pub-3940256099942544/5224354917';
+  }
+
+  static String get rewardedInterstitial {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/6978759866'
+        : 'ca-app-pub-3940256099942544/5354046379';
+  }
+
+  static String get appOpen {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/5575463023'
+        : 'ca-app-pub-3940256099942544/9257395921';
+  }
+
+  static String get native {
+    return Platform.isIOS
+        ? 'ca-app-pub-3940256099942544/3986624511'
+        : 'ca-app-pub-3940256099942544/2247696110';
+  }
 }
 
 class CoreAdsExampleApp extends StatelessWidget {
@@ -117,14 +157,13 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
       AdsConfig(
         environment: AdsEnvironment.test,
         adUnitIds: AdUnitIds({
-          ExamplePlacements.banner: 'ca-app-pub-3940256099942544/6300978111',
-          ExamplePlacements.interstitial:
-              'ca-app-pub-3940256099942544/1033173712',
-          ExamplePlacements.rewarded: 'ca-app-pub-3940256099942544/5224354917',
+          ExamplePlacements.banner: ExampleAdUnitIds.banner,
+          ExamplePlacements.interstitial: ExampleAdUnitIds.interstitial,
+          ExamplePlacements.rewarded: ExampleAdUnitIds.rewarded,
           ExamplePlacements.rewardedInterstitial:
-              'ca-app-pub-3940256099942544/5354046379',
-          ExamplePlacements.appOpen: 'ca-app-pub-3940256099942544/9257395921',
-          ExamplePlacements.native: 'ca-app-pub-3940256099942544/2247696110',
+              ExampleAdUnitIds.rewardedInterstitial,
+          ExamplePlacements.appOpen: ExampleAdUnitIds.appOpen,
+          ExamplePlacements.native: ExampleAdUnitIds.native,
         }),
         bannerAdConfigs: BannerAdConfigs({
           ExamplePlacements.banner: ExampleAdConfigs.banner,
@@ -355,6 +394,10 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
             const AdsNative(
               placement: ExamplePlacements.native,
               loading: AdsLoadingWidget(height: 140),
+              error: SizedBox(
+                height: 140,
+                child: Center(child: Text('Native ad failed to load')),
+              ),
             )
           else
             const AdsLoadingWidget(height: 140),

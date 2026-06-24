@@ -211,6 +211,57 @@ screen changes.
 The host app must register the native ad factory matching the placement
 `factoryId` on Android and iOS.
 
+Steps:
+
+1. Create a native placement:
+
+```dart
+static const articleNative = AdPlacement(
+  key: 'article_native',
+  type: AdType.native,
+);
+```
+
+2. Add the ad unit ID and native config:
+
+```dart
+AdsConfig(
+  adUnitIds: AdUnitIds({
+    AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
+  }),
+  nativeAdConfigs: NativeAdConfigs({
+    AppAdPlacements.articleNative: NativeAdConfig(
+      factoryId: 'article_native_factory',
+      height: 140,
+    ),
+  }),
+);
+```
+
+3. Register the same `factoryId` in Android and iOS native code.
+
+Android:
+
+```kotlin
+GoogleMobileAdsPlugin.registerNativeAdFactory(
+    flutterEngine,
+    "article_native_factory",
+    ArticleNativeAdFactory(this),
+)
+```
+
+iOS:
+
+```swift
+FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
+  self,
+  factoryId: "article_native_factory",
+  nativeAdFactory: ArticleNativeAdFactory()
+)
+```
+
+4. Render it in Flutter:
+
 ```dart
 const AdsNative(
   placement: AppAdPlacements.articleNative,
