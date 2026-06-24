@@ -101,6 +101,18 @@ class BannerAdConfig {
 
   /// Widget height used by default placeholders.
   double get resolvedHeight => height ?? defaultHeight;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is BannerAdConfig &&
+            other.size == size &&
+            other.width == width &&
+            other.height == height;
+  }
+
+  @override
+  int get hashCode => Object.hash(size, width, height);
 }
 
 /// Banner ad configuration grouped by placement.

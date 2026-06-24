@@ -160,7 +160,7 @@ Supported sizes are `banner`, `largeBanner`, `mediumRectangle`, `fullBanner`,
 ```dart
 const AdsBanner(
   placement: AppAdPlacements.homeTopBanner,
-  config: BannerAdConfig.anchoredAdaptive(width: 360),
+  config: BannerAdConfig.anchoredAdaptive(),
 );
 ```
 

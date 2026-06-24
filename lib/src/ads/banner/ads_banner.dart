@@ -40,7 +40,10 @@ class _AdsBannerState extends State<AdsBanner> {
   @override
   void initState() {
     super.initState();
-    _loadFuture = _load(widget.config);
+    if (!widget.config.needsResolvedWidth) {
+      _resolvedConfig = widget.config;
+      _loadFuture = _load(widget.config);
+    }
   }
 
   @override
