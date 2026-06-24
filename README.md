@@ -175,6 +175,37 @@ AdsBanner(
 );
 ```
 
+With manual retry:
+
+```dart
+AdsBanner(
+  placement: AppAdPlacements.homeTopBanner,
+  errorBuilder: (context, retry) {
+    return TextButton(
+      onPressed: retry,
+      child: const Text('Retry ad'),
+    );
+  },
+);
+```
+
+With local callbacks:
+
+```dart
+AdsBanner(
+  placement: AppAdPlacements.homeTopBanner,
+  onLoaded: () {},
+  onFailed: (failure) {},
+);
+```
+
+When `AppAds.clear(placement)` or `AppAds.clearType(AdType.banner)` is called,
+visible `AdsBanner` widgets for the cleared placement/type reload automatically.
+
+By default, `AdsBanner` clears its cached ad when the widget is disposed. Set
+`clearOnDispose: false` if the app wants to keep the placement cached across
+screen changes.
+
 ## Native
 
 The host app must register the native ad factory matching the placement

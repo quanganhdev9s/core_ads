@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
 import 'core/enums/ad_type.dart';
+import 'core/reload/ads_reload_notifier.dart';
 import 'core/results/ad_failure.dart';
 import 'core/results/ad_result.dart';
 import 'ads/banner/banner_ad_config.dart';
@@ -149,11 +150,13 @@ class AppAds {
   /// Clears cached ad resources for [placement].
   static Future<void> clear(AdPlacement placement) async {
     await _repository?.clear(placement);
+    AdsReloadNotifier.instance.notifyPlacement(placement);
   }
 
   /// Clears cached ad resources for all placements of [type].
   static Future<void> clearType(AdType type) async {
     await _repository?.clearType(type);
+    AdsReloadNotifier.instance.notifyType(type);
   }
 
   /// Disposes ads resources.

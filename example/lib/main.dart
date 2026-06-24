@@ -289,6 +289,14 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     });
   }
 
+  void _onBannerLoaded() {
+    _setAdState(ExamplePlacements.banner, 'ready');
+  }
+
+  void _onBannerFailed(AdFailure failure) {
+    _setAdState(ExamplePlacements.banner, 'failed: ${failure.code}');
+  }
+
   String _adStateText() {
     return ExamplePlacements.values
         .map(
@@ -331,9 +339,12 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           const Text('Banner'),
           const SizedBox(height: 8),
           if (_adsInitialized)
-            const AdsBanner(
+            AdsBanner(
               placement: ExamplePlacements.banner,
               config: ExampleAdConfigs.banner,
+              showRetryButton: true,
+              onLoaded: _onBannerLoaded,
+              onFailed: _onBannerFailed,
             )
           else
             const AdsLoadingWidget(),
