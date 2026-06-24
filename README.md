@@ -269,6 +269,21 @@ const AdsNative(
 );
 ```
 
+`AdsNative` also supports local retry and callbacks:
+
+```dart
+AdsNative(
+  placement: AppAdPlacements.articleNative,
+  showRetryButton: true,
+  onLoaded: () {},
+  onFailed: (failure) {},
+);
+```
+
+By default, `AdsNative` clears its cached ad when the widget is disposed. Set
+`clearOnDispose: false` if the app wants to keep the placement cached across
+screen changes.
+
 ## Fullscreen Ads
 
 Preload placements before showing:

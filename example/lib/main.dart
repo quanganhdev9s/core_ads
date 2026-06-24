@@ -336,6 +336,14 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     _setAdState(ExamplePlacements.banner, 'failed: ${failure.code}');
   }
 
+  void _onNativeLoaded() {
+    _setAdState(ExamplePlacements.native, 'ready');
+  }
+
+  void _onNativeFailed(AdFailure failure) {
+    _setAdState(ExamplePlacements.native, 'failed: ${failure.code}');
+  }
+
   String _adStateText() {
     return ExamplePlacements.values
         .map(
@@ -391,13 +399,16 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           const Text('Native'),
           const SizedBox(height: 8),
           if (_adsInitialized)
-            const AdsNative(
+            AdsNative(
               placement: ExamplePlacements.native,
-              loading: AdsLoadingWidget(height: 140),
-              error: SizedBox(
+              loading: const AdsLoadingWidget(height: 140),
+              error: const SizedBox(
                 height: 140,
                 child: Center(child: Text('Native ad failed to load')),
               ),
+              showRetryButton: true,
+              onLoaded: _onNativeLoaded,
+              onFailed: _onNativeFailed,
             )
           else
             const AdsLoadingWidget(height: 140),
@@ -428,6 +439,14 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           OutlinedButton(
             onPressed: () => AppAds.clearType(AdType.interstitial),
             child: const Text('Clear interstitial cache'),
+          ),
+          OutlinedButton(
+            onPressed: () => AppAds.clearType(AdType.banner),
+            child: const Text('Clear banner cache'),
+          ),
+          OutlinedButton(
+            onPressed: () => AppAds.clearType(AdType.native),
+            child: const Text('Clear native cache'),
           ),
         ],
       ),
