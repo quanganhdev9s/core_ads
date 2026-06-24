@@ -1,7 +1,6 @@
 name: core_ads
-description: "A new Flutter project."
+description: A reusable Flutter ads package with placement-based APIs, Google Mobile Ads support, consent, and production-ready lifecycle handling.
 version: 0.0.1
-homepage:
 
 environment:
   sdk: ^3.12.2

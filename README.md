@@ -75,7 +75,7 @@ await AppAds.initialize(
       maxAdContentRating: AdsMaxAdContentRating.t,
     ),
     fullscreenCooldown: FullscreenAdCooldownConfig(),
-    enableDebugLogs: true,
+    enableDebugLogs: false,
   ),
 );
 ```
@@ -93,6 +93,39 @@ const AdsNative(
 await AppAds.load(AppAdPlacements.levelCompleteInterstitial);
 await AppAds.showInterstitial(AppAdPlacements.levelCompleteInterstitial);
 ```
+
+Always inspect returned results when the action controls app flow:
+
+```dart
+final result = await AppAds.initialize(config);
+if (result case AdFailed(:final failure)) {
+  debugPrint('Ads init failed: ${failure.code}');
+}
+```
+
+## Platform Setup
+
+The host app must configure a Google Mobile Ads app ID before initializing ads.
+
+Android `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<application>
+  <meta-data
+      android:name="com.google.android.gms.ads.APPLICATION_ID"
+      android:value="ca-app-pub-xxx~yyy" />
+</application>
+```
+
+iOS `ios/Runner/Info.plist`:
+
+```xml
+<key>GADApplicationIdentifier</key>
+<string>ca-app-pub-xxx~yyy</string>
+```
+
+Use Google's sample app IDs only in test apps. Production builds should use the
+real app IDs from AdMob.
 
 ## Public API
 
@@ -375,6 +408,22 @@ Use `onPaid` for ad revenue analytics. Grant rewards inside the
 Banner ads can refresh automatically by the SDK, so banner `onLoaded` can be
 called again even when the app does not call `load` again.
 
+## Failure Codes
+
+Every operation returns `AdResult<void>`. Important failure codes:
+
+- `not_ready`: no ad is ready to show, or ads were not initialized yet.
+- `missing_ad_unit_id`: no ad unit ID is configured for the placement.
+- `invalid_banner_size`: adaptive banner size could not be resolved.
+- `missing_native_ad_config`: native placement has no `NativeAdConfig`.
+- `missing_native_ad_factory`: platform native factory was not registered.
+- `test_ad_unit_in_production`: production config contains Google sample ad
+  unit IDs.
+- `invalid_request`: the Google SDK rejected the ad request.
+- `network_error`: network failed while loading/showing an ad.
+- `no_fill`: the ad network returned no fill.
+- `unknown`: an unexpected SDK or platform error occurred.
+
 ## Clear And Dispose
 
 Clear one placement:
@@ -409,3 +458,16 @@ automatically.
 - Fullscreen ads (`interstitial`, `rewarded`, `rewardedInterstitial`,
   `appOpen`) are cached by placement.
 - Reward callbacks are only emitted from SDK reward callbacks.
+
+## Production Checklist
+
+Before releasing:
+
+- Use `AdsEnvironment.production`.
+- Replace all Google sample ad unit IDs. `ca-app-pub-3940256099942544/...`
+  fails initialization in production mode.
+- Disable `resetOnInitialize` for consent.
+- Add `NSUserTrackingUsageDescription` on iOS when ATT is enabled.
+- Register every native ad factory used by `NativeAdConfig.factoryId` on both
+  Android and iOS.
+- Keep `enableDebugLogs` off unless you intentionally want package logs.

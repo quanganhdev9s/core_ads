@@ -165,13 +165,23 @@ class GoogleAdsService implements AdsService {
       onAdClicked: (_) => _emitClicked(placement),
     );
 
-    ad.show(
-      onUserEarnedReward: (_, reward) {
-        _logger.log('Reward earned: ${reward.amount} ${reward.type}');
-        _emitReward(placement, reward);
-        onRewardEarned();
-      },
-    );
+    try {
+      ad.show(
+        onUserEarnedReward: (_, reward) {
+          _logger.log('Reward earned: ${reward.amount} ${reward.type}');
+          _emitReward(placement, reward);
+          onRewardEarned();
+        },
+      );
+    } catch (error) {
+      ad.dispose();
+      _rewardedAds.remove(placement);
+      final failure = AdFailure.unknown('Failed to show rewarded ad', error);
+      _emitFailed(placement, failure);
+      if (!completer.isCompleted) {
+        completer.complete(AdResult.failure(failure));
+      }
+    }
 
     return completer.future;
   }
@@ -210,15 +220,29 @@ class GoogleAdsService implements AdsService {
           onAdClicked: (_) => _emitClicked(placement),
         );
 
-    await ad.show(
-      onUserEarnedReward: (_, reward) {
-        _logger.log(
-          'Rewarded interstitial reward earned: ${reward.amount} ${reward.type}',
-        );
-        _emitReward(placement, reward);
-        onRewardEarned();
-      },
-    );
+    try {
+      await ad.show(
+        onUserEarnedReward: (_, reward) {
+          _logger.log(
+            'Rewarded interstitial reward earned: ${reward.amount} '
+            '${reward.type}',
+          );
+          _emitReward(placement, reward);
+          onRewardEarned();
+        },
+      );
+    } catch (error) {
+      ad.dispose();
+      _rewardedInterstitialAds.remove(placement);
+      final failure = AdFailure.unknown(
+        'Failed to show rewarded interstitial ad',
+        error,
+      );
+      _emitFailed(placement, failure);
+      if (!completer.isCompleted) {
+        completer.complete(AdResult.failure(failure));
+      }
+    }
 
     return completer.future;
   }
@@ -323,13 +347,13 @@ class GoogleAdsService implements AdsService {
           _bannerAds[placement] = ad as BannerAd;
           _logger.log('${placement.key} banner loaded');
           _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
+          _completeLoad(completer, const AdResult.success(null));
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           _bannerAds.remove(placement);
           final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
+          _completeLoad(completer, AdResult.failure(failure));
         },
         onAdImpression: (_) => _emitImpression(placement),
         onAdClicked: (_) => _emitClicked(placement),
@@ -338,7 +362,14 @@ class GoogleAdsService implements AdsService {
       ),
     );
 
-    await bannerAd.load();
+    try {
+      await bannerAd.load();
+    } catch (error) {
+      bannerAd.dispose();
+      _bannerAds.remove(placement);
+      return AdResult.failure(_mapLoadException('banner', error));
+    }
+
     return completer.future;
   }
 
@@ -385,13 +416,13 @@ class GoogleAdsService implements AdsService {
           _nativeAds[placement] = ad as NativeAd;
           _logger.log('${placement.key} native loaded');
           _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
+          _completeLoad(completer, const AdResult.success(null));
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           _nativeAds.remove(placement);
           final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
+          _completeLoad(completer, AdResult.failure(failure));
         },
         onAdImpression: (_) => _emitImpression(placement),
         onAdClicked: (_) => _emitClicked(placement),
@@ -419,22 +450,28 @@ class GoogleAdsService implements AdsService {
     final completer = Completer<AdResult<void>>();
     _interstitialAds.remove(placement)?.dispose();
 
-    InterstitialAd.load(
-      adUnitId: adUnitId,
-      request: _request,
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAds[placement] = ad;
-          _logger.log('${placement.key} interstitial loaded');
-          _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
-        },
-        onAdFailedToLoad: (error) {
-          final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
-        },
-      ),
-    );
+    try {
+      InterstitialAd.load(
+        adUnitId: adUnitId,
+        request: _request,
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (ad) {
+            _interstitialAds[placement] = ad;
+            _logger.log('${placement.key} interstitial loaded');
+            _emitLoaded(placement);
+            _completeLoad(completer, const AdResult.success(null));
+          },
+          onAdFailedToLoad: (error) {
+            final failure = _mapAdError(error);
+            _completeLoad(completer, AdResult.failure(failure));
+          },
+        ),
+      );
+    } catch (error) {
+      return Future.value(
+        AdResult.failure(_mapLoadException('interstitial', error)),
+      );
+    }
 
     return completer.future;
   }
@@ -448,22 +485,28 @@ class GoogleAdsService implements AdsService {
     final completer = Completer<AdResult<void>>();
     _rewardedAds.remove(placement)?.dispose();
 
-    RewardedAd.load(
-      adUnitId: adUnitId,
-      request: _request,
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAds[placement] = ad;
-          _logger.log('${placement.key} rewarded loaded');
-          _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
-        },
-        onAdFailedToLoad: (error) {
-          final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
-        },
-      ),
-    );
+    try {
+      RewardedAd.load(
+        adUnitId: adUnitId,
+        request: _request,
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            _rewardedAds[placement] = ad;
+            _logger.log('${placement.key} rewarded loaded');
+            _emitLoaded(placement);
+            _completeLoad(completer, const AdResult.success(null));
+          },
+          onAdFailedToLoad: (error) {
+            final failure = _mapAdError(error);
+            _completeLoad(completer, AdResult.failure(failure));
+          },
+        ),
+      );
+    } catch (error) {
+      return Future.value(
+        AdResult.failure(_mapLoadException('rewarded', error)),
+      );
+    }
 
     return completer.future;
   }
@@ -477,22 +520,28 @@ class GoogleAdsService implements AdsService {
     final completer = Completer<AdResult<void>>();
     _rewardedInterstitialAds.remove(placement)?.dispose();
 
-    RewardedInterstitialAd.load(
-      adUnitId: adUnitId,
-      request: _request,
-      rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedInterstitialAds[placement] = ad;
-          _logger.log('${placement.key} rewarded interstitial loaded');
-          _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
-        },
-        onAdFailedToLoad: (error) {
-          final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
-        },
-      ),
-    );
+    try {
+      RewardedInterstitialAd.load(
+        adUnitId: adUnitId,
+        request: _request,
+        rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
+          onAdLoaded: (ad) {
+            _rewardedInterstitialAds[placement] = ad;
+            _logger.log('${placement.key} rewarded interstitial loaded');
+            _emitLoaded(placement);
+            _completeLoad(completer, const AdResult.success(null));
+          },
+          onAdFailedToLoad: (error) {
+            final failure = _mapAdError(error);
+            _completeLoad(completer, AdResult.failure(failure));
+          },
+        ),
+      );
+    } catch (error) {
+      return Future.value(
+        AdResult.failure(_mapLoadException('rewarded interstitial', error)),
+      );
+    }
 
     return completer.future;
   }
@@ -506,22 +555,28 @@ class GoogleAdsService implements AdsService {
     final completer = Completer<AdResult<void>>();
     _appOpenAds.remove(placement)?.dispose();
 
-    AppOpenAd.load(
-      adUnitId: adUnitId,
-      request: _request,
-      adLoadCallback: AppOpenAdLoadCallback(
-        onAdLoaded: (ad) {
-          _appOpenAds[placement] = ad;
-          _logger.log('${placement.key} app open loaded');
-          _emitLoaded(placement);
-          completer.complete(const AdResult.success(null));
-        },
-        onAdFailedToLoad: (error) {
-          final failure = _mapAdError(error);
-          completer.complete(AdResult.failure(failure));
-        },
-      ),
-    );
+    try {
+      AppOpenAd.load(
+        adUnitId: adUnitId,
+        request: _request,
+        adLoadCallback: AppOpenAdLoadCallback(
+          onAdLoaded: (ad) {
+            _appOpenAds[placement] = ad;
+            _logger.log('${placement.key} app open loaded');
+            _emitLoaded(placement);
+            _completeLoad(completer, const AdResult.success(null));
+          },
+          onAdFailedToLoad: (error) {
+            final failure = _mapAdError(error);
+            _completeLoad(completer, AdResult.failure(failure));
+          },
+        ),
+      );
+    } catch (error) {
+      return Future.value(
+        AdResult.failure(_mapLoadException('app open', error)),
+      );
+    }
 
     return completer.future;
   }
@@ -555,7 +610,20 @@ class GoogleAdsService implements AdsService {
       onAdClicked: (_) => _emitClicked(placement),
     );
 
-    ad.show();
+    try {
+      ad.show();
+    } catch (error) {
+      ad.dispose();
+      _interstitialAds.remove(placement);
+      final failure = AdFailure.unknown(
+        'Failed to show interstitial ad',
+        error,
+      );
+      _emitFailed(placement, failure);
+      if (!completer.isCompleted) {
+        completer.complete(AdResult.failure(failure));
+      }
+    }
     return completer.future;
   }
 
@@ -588,7 +656,17 @@ class GoogleAdsService implements AdsService {
       onAdClicked: (_) => _emitClicked(placement),
     );
 
-    ad.show();
+    try {
+      ad.show();
+    } catch (error) {
+      ad.dispose();
+      _appOpenAds.remove(placement);
+      final failure = AdFailure.unknown('Failed to show app open ad', error);
+      _emitFailed(placement, failure);
+      if (!completer.isCompleted) {
+        completer.complete(AdResult.failure(failure));
+      }
+    }
     return completer.future;
   }
 
@@ -647,6 +725,15 @@ class GoogleAdsService implements AdsService {
       ad.dispose();
     }
     ads.clear();
+  }
+
+  void _completeLoad(
+    Completer<AdResult<void>> completer,
+    AdResult<void> result,
+  ) {
+    if (!completer.isCompleted) {
+      completer.complete(result);
+    }
   }
 
   void _emitLoaded(AdPlacement placement) {
@@ -735,6 +822,15 @@ class GoogleAdsService implements AdsService {
     }
 
     return AdFailure.unknown('Failed to load native ad', error);
+  }
+
+  AdFailure _mapLoadException(String adName, Object error) {
+    final message = error.toString();
+    if (_isMissingNativeAdFactoryMessage(message)) {
+      return AdFailure.missingNativeAdFactory(message, error);
+    }
+
+    return AdFailure.unknown('Failed to load $adName ad', error);
   }
 
   bool _isMissingNativeAdFactoryMessage(String message) {
