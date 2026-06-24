@@ -43,6 +43,11 @@ class GoogleAdsService implements AdsService {
     _config = config;
     _logger = AdsLogger(enabled: config.enableDebugLogs);
 
+    final productionConfigFailure = _validateProductionAdUnitIds(config);
+    if (productionConfigFailure != null) {
+      return AdResult.failure(productionConfigFailure);
+    }
+
     try {
       await _updateRequestConfiguration(config.request);
       await MobileAds.instance.initialize();
@@ -401,9 +406,7 @@ class GoogleAdsService implements AdsService {
     } catch (error) {
       nativeAd.dispose();
       _nativeAds.remove(placement);
-      return AdResult.failure(
-        AdFailure.unknown('Failed to load native ad', error),
-      );
+      return AdResult.failure(_mapNativeLoadException(error));
     }
   }
 
@@ -614,6 +617,31 @@ class GoogleAdsService implements AdsService {
     return _config?.adUnitIds.idFor(placement);
   }
 
+  AdFailure? _validateProductionAdUnitIds(AdsConfig config) {
+    if (config.isTest) {
+      return null;
+    }
+
+    final testPlacements = config.adUnitIds.values.entries
+        .where((entry) => _isGoogleSampleAdUnitId(entry.value))
+        .map((entry) => entry.key.key)
+        .toList(growable: false);
+
+    if (testPlacements.isEmpty) {
+      return null;
+    }
+
+    return AdFailure.testAdUnitInProduction(
+      'Production config contains Google sample ad unit IDs for: '
+      '${testPlacements.join(', ')}. Use AdsEnvironment.test for sample IDs '
+      'or replace them with real ad unit IDs before release.',
+    );
+  }
+
+  bool _isGoogleSampleAdUnitId(String adUnitId) {
+    return adUnitId.startsWith('ca-app-pub-3940256099942544/');
+  }
+
   void _disposeAll<T extends Ad>(Map<AdPlacement, T> ads) {
     for (final ad in ads.values) {
       ad.dispose();
@@ -687,15 +715,32 @@ class GoogleAdsService implements AdsService {
     final code = error.code.toString();
     final message = error.message;
 
-    if (code == '3') {
-      return AdFailure.noFill(message);
+    if (_isMissingNativeAdFactoryMessage(message)) {
+      return AdFailure.missingNativeAdFactory(message, error);
     }
 
-    if (code == '2') {
-      return AdFailure.network(message);
+    return switch (code) {
+      '0' => AdFailure(code: 'internal_error', message: message, cause: error),
+      '1' => AdFailure(code: 'invalid_request', message: message, cause: error),
+      '2' => AdFailure(code: 'network_error', message: message, cause: error),
+      '3' => AdFailure(code: 'no_fill', message: message, cause: error),
+      _ => AdFailure(code: code, message: message, cause: error),
+    };
+  }
+
+  AdFailure _mapNativeLoadException(Object error) {
+    final message = error.toString();
+    if (_isMissingNativeAdFactoryMessage(message)) {
+      return AdFailure.missingNativeAdFactory(message, error);
     }
 
-    return AdFailure(code: code, message: message, cause: error);
+    return AdFailure.unknown('Failed to load native ad', error);
+  }
+
+  bool _isMissingNativeAdFactoryMessage(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('nativeadfactory') ||
+        normalized.contains('native ad factory');
   }
 
   @override
