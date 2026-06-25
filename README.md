@@ -28,6 +28,7 @@ class AppAdPlacements {
   static const levelCompleteInterstitial = AdPlacement(
     key: 'level_complete_interstitial',
     type: AdType.interstitial,
+    preloadAfterShow: true,
   );
 
   static const doubleReward = AdPlacement(
@@ -353,17 +354,14 @@ Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
 interstitial, and app open ads cannot show on top of each other.
 
 By default, each fullscreen placement preloads again after a successful show.
-Disable this per placement when the app wants to decide the next preload moment
-manually:
+Disable this on the placement when the app wants to decide the next preload
+moment manually:
 
 ```dart
-AdsConfig(
-  environment: AdsEnvironment.production,
-  adUnitIds: AdUnitIds({}),
-  preloadAfterShowByPlacement: {
-    AppAdPlacements.levelCompleteInterstitial: false,
-    AppAdPlacements.appOpen: true,
-  },
+static const levelCompleteInterstitial = AdPlacement(
+  key: 'level_complete_interstitial',
+  type: AdType.interstitial,
+  preloadAfterShow: false,
 );
 ```
 

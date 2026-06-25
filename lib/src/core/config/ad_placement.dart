@@ -6,13 +6,21 @@ import '../enums/ad_type.dart';
 /// that format is used.
 final class AdPlacement {
   /// Creates an ad placement.
-  const AdPlacement({required this.key, required this.type});
+  const AdPlacement({
+    required this.key,
+    required this.type,
+    this.preloadAfterShow = true,
+  });
 
   /// Stable placement key, such as `home_top` or `level_complete`.
   final String key;
 
   /// Ad format used by this placement.
   final AdType type;
+
+  /// Whether this placement should preload again after a successful fullscreen
+  /// show.
+  final bool preloadAfterShow;
 
   @override
   bool operator ==(Object other) {

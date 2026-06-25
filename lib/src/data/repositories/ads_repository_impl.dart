@@ -222,7 +222,7 @@ class AdsRepositoryImpl implements AdsRepository {
         placement: placement,
         fullscreenAdController: fullscreenAdController,
         fullscreenCooldown: config.fullscreenCooldown,
-        preloadAfterShow: config.shouldPreloadAfterShow(placement),
+        preloadAfterShow: placement.preloadAfterShow,
       ),
     );
   }
@@ -235,7 +235,7 @@ class AdsRepositoryImpl implements AdsRepository {
         consentManager: consentManager,
         placement: placement,
         fullscreenAdController: fullscreenAdController,
-        preloadAfterShow: config.shouldPreloadAfterShow(placement),
+        preloadAfterShow: placement.preloadAfterShow,
       ),
     );
   }
@@ -250,7 +250,7 @@ class AdsRepositoryImpl implements AdsRepository {
         consentManager: consentManager,
         placement: placement,
         fullscreenAdController: fullscreenAdController,
-        preloadAfterShow: config.shouldPreloadAfterShow(placement),
+        preloadAfterShow: placement.preloadAfterShow,
       ),
     );
   }
@@ -264,7 +264,7 @@ class AdsRepositoryImpl implements AdsRepository {
         placement: placement,
         fullscreenAdController: fullscreenAdController,
         fullscreenCooldown: config.fullscreenCooldown,
-        preloadAfterShow: config.shouldPreloadAfterShow(placement),
+        preloadAfterShow: placement.preloadAfterShow,
       ),
     );
   }

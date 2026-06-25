@@ -4,7 +4,6 @@ import '../fullscreen/fullscreen_ad_cooldown_config.dart';
 import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
-import 'ad_placement.dart';
 import 'ads_environment.dart';
 import '../../ads/banner/banner_ad_config.dart';
 import '../../ads/native/native_ad_config.dart';
@@ -21,7 +20,6 @@ class AdsConfig {
     this.bannerAdConfigs = const BannerAdConfigs({}),
     this.nativeAdConfigs = const NativeAdConfigs({}),
     this.fullscreenCooldown = const FullscreenAdCooldownConfig(),
-    this.preloadAfterShowByPlacement = const {},
     this.callbacks = const AdsCallbacks(),
     this.enableDebugLogs = false,
   });
@@ -50,11 +48,6 @@ class AdsConfig {
   /// Cooldown rules for fullscreen ads.
   final FullscreenAdCooldownConfig fullscreenCooldown;
 
-  /// Placement-level preload behavior after a successful fullscreen show.
-  ///
-  /// Placements not included in this map default to `true`.
-  final Map<AdPlacement, bool> preloadAfterShowByPlacement;
-
   /// Lifecycle and analytics callbacks.
   final AdsCallbacks callbacks;
 
@@ -63,9 +56,4 @@ class AdsConfig {
 
   /// Whether this config is using test behavior.
   bool get isTest => environment == AdsEnvironment.test;
-
-  /// Whether [placement] should preload again after a successful show.
-  bool shouldPreloadAfterShow(AdPlacement placement) {
-    return preloadAfterShowByPlacement[placement] ?? true;
-  }
 }
