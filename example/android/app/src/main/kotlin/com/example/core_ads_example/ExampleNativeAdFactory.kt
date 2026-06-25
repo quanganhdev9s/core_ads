@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 import io.flutter.plugins.googlemobileads.NativeAdFactory
@@ -65,6 +66,15 @@ class ExampleNativeAdFactory(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             )
         }
+        val mediaView = MediaView(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(120),
+            ).apply {
+                topMargin = dp(6)
+                bottomMargin = dp(6)
+            }
+        }
         val callToAction = Button(context).apply {
             minHeight = 0
             minimumHeight = 0
@@ -80,14 +90,17 @@ class ExampleNativeAdFactory(
         container.addView(sponsored)
         container.addView(headline)
         container.addView(body)
+        container.addView(mediaView)
         container.addView(callToAction)
         adView.addView(container)
 
         adView.headlineView = headline
         adView.bodyView = body
+        adView.mediaView = mediaView
         adView.callToActionView = callToAction
 
         headline.text = nativeAd.headline
+        mediaView.mediaContent = nativeAd.mediaContent
 
         if (nativeAd.body == null) {
             body.visibility = View.GONE
@@ -105,5 +118,9 @@ class ExampleNativeAdFactory(
 
         adView.setNativeAd(nativeAd)
         return adView
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * context.resources.displayMetrics.density).toInt()
     }
 }

@@ -274,6 +274,50 @@ placement cached.
 Like banners, multiple native widgets that can exist at the same time should use
 multiple placements. Those placements can still share one native ad unit ID.
 
+### Collapsible Native
+
+Use `AdsCollapsibleNative` when a native ad should collapse into a smaller
+banner. The native and banner must use separate placements:
+
+```dart
+class AppAdPlacements {
+  static const articleNative = AdPlacement(
+    key: 'article_native',
+    type: AdType.native,
+  );
+
+  static const articleCollapsedBanner = AdPlacement(
+    key: 'article_collapsed_banner',
+    type: AdType.banner,
+  );
+}
+```
+
+Add the route observer so the native ad can reopen when returning from another
+screen:
+
+```dart
+MaterialApp(
+  navigatorObservers: [AdsRouteObserver.instance],
+  home: const HomePage(),
+);
+```
+
+Render the collapsible ad:
+
+```dart
+const AdsCollapsibleNative(
+  nativePlacement: AppAdPlacements.articleNative,
+  bannerPlacement: AppAdPlacements.articleCollapsedBanner,
+  nativeHeight: 140,
+  bannerConfig: BannerAdConfig.banner(),
+);
+```
+
+When the user taps the close button, the native ad is cleared and replaced by
+the banner aligned to the bottom-right of the original native area. The native
+ad expands again only when a pushed route is popped back to this screen.
+
 ## Fullscreen Ads
 
 Preload before showing:

@@ -38,6 +38,9 @@ final class ExampleNativeAdFactory: NSObject, FLTNativeAdFactory {
     bodyLabel.lineBreakMode = .byTruncatingTail
     bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
+    let mediaView = MediaView()
+    mediaView.translatesAutoresizingMaskIntoConstraints = false
+
     let callToActionButton = UIButton(type: .system)
     callToActionButton.titleLabel?.numberOfLines = 1
     callToActionButton.titleLabel?.lineBreakMode = .byTruncatingTail
@@ -46,6 +49,7 @@ final class ExampleNativeAdFactory: NSObject, FLTNativeAdFactory {
     container.addArrangedSubview(sponsoredLabel)
     container.addArrangedSubview(headlineLabel)
     container.addArrangedSubview(bodyLabel)
+    container.addArrangedSubview(mediaView)
     container.addArrangedSubview(callToActionButton)
     adView.addSubview(container)
 
@@ -54,13 +58,16 @@ final class ExampleNativeAdFactory: NSObject, FLTNativeAdFactory {
       container.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
       container.topAnchor.constraint(equalTo: adView.topAnchor),
       container.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
+      mediaView.heightAnchor.constraint(equalToConstant: 120),
     ])
 
     adView.headlineView = headlineLabel
     adView.bodyView = bodyLabel
+    adView.mediaView = mediaView
     adView.callToActionView = callToActionButton
 
     headlineLabel.text = nativeAd.headline
+    mediaView.mediaContent = nativeAd.mediaContent
 
     bodyLabel.text = nativeAd.body
     bodyLabel.isHidden = nativeAd.body == nil

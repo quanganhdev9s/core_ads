@@ -1,4 +1,5 @@
 import '../../core/config/ad_placement.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Supported fixed banner sizes.
 enum BannerAdSize {
@@ -101,6 +102,26 @@ class BannerAdConfig {
 
   /// Widget height used by default placeholders.
   double get resolvedHeight => height ?? defaultHeight;
+
+  /// Resolves the exact Google anchored adaptive banner height for [width].
+  ///
+  /// This calls the Google Mobile Ads SDK. It is intended for
+  /// [BannerAdSize.anchoredAdaptive]; other banner sizes return
+  /// [heightForWidth].
+  Future<double?> googleAnchoredAdaptiveHeightForWidth(double width) async {
+    if (height != null) {
+      return height!;
+    }
+
+    if (!width.isFinite || width <= 0) {
+      return null;
+    }
+
+    final adSize = await AdSize.getLargeAnchoredAdaptiveBannerAdSize(
+      width.round(),
+    );
+    return adSize?.height.toDouble();
+  }
 
   @override
   bool operator ==(Object other) {

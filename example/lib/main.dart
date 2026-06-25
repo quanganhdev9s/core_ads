@@ -13,6 +13,16 @@ class ExamplePlacements {
 
   static const native = AdPlacement(key: 'example_native', type: AdType.native);
 
+  static const collapsibleNative = AdPlacement(
+    key: 'example_collapsible_native',
+    type: AdType.native,
+  );
+
+  static const collapsedBanner = AdPlacement(
+    key: 'example_collapsed_banner',
+    type: AdType.banner,
+  );
+
   static const interstitial = AdPlacement(
     key: 'example_interstitial',
     type: AdType.interstitial,
@@ -36,6 +46,8 @@ class ExamplePlacements {
   static const values = [
     banner,
     native,
+    collapsibleNative,
+    collapsedBanner,
     interstitial,
     rewarded,
     rewardedInterstitial,
@@ -96,6 +108,7 @@ class CoreAdsExampleApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
+      navigatorObservers: [AdsRouteObserver.instance],
       home: const AdsExamplePage(),
     );
   }
@@ -158,20 +171,27 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
         environment: AdsEnvironment.test,
         adUnitIds: AdUnitIds({
           ExamplePlacements.banner: ExampleAdUnitIds.banner,
+          ExamplePlacements.collapsedBanner: ExampleAdUnitIds.banner,
           ExamplePlacements.interstitial: ExampleAdUnitIds.interstitial,
           ExamplePlacements.rewarded: ExampleAdUnitIds.rewarded,
           ExamplePlacements.rewardedInterstitial:
               ExampleAdUnitIds.rewardedInterstitial,
           ExamplePlacements.appOpen: ExampleAdUnitIds.appOpen,
           ExamplePlacements.native: ExampleAdUnitIds.native,
+          ExamplePlacements.collapsibleNative: ExampleAdUnitIds.native,
         }),
         bannerAdConfigs: BannerAdConfigs({
           ExamplePlacements.banner: ExampleAdConfigs.banner,
+          ExamplePlacements.collapsedBanner: const BannerAdConfig.banner(),
         }),
         nativeAdConfigs: NativeAdConfigs({
           ExamplePlacements.native: const NativeAdConfig(
             factoryId: 'example_native_factory',
-            height: 140,
+            height: 260,
+          ),
+          ExamplePlacements.collapsibleNative: const NativeAdConfig(
+            factoryId: 'example_native_factory',
+            height: 260,
           ),
         }),
         consent: const AdsConsentConfig(
@@ -344,6 +364,28 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     _setAdState(ExamplePlacements.native, 'failed: ${failure.code}');
   }
 
+  void _onCollapsibleNativeLoaded() {
+    _setAdState(ExamplePlacements.collapsibleNative, 'ready');
+  }
+
+  void _onCollapsibleNativeFailed(AdFailure failure) {
+    _setAdState(ExamplePlacements.collapsibleNative, 'failed: ${failure.code}');
+  }
+
+  void _onCollapsedBannerLoaded() {
+    _setAdState(ExamplePlacements.collapsedBanner, 'ready');
+  }
+
+  void _onCollapsedBannerFailed(AdFailure failure) {
+    _setAdState(ExamplePlacements.collapsedBanner, 'failed: ${failure.code}');
+  }
+
+  void _openSecondPage() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ExampleSecondPage()));
+  }
+
   String _adStateText() {
     return ExamplePlacements.values
         .map(
@@ -401,9 +443,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           if (_adsInitialized)
             AdsNative(
               placement: ExamplePlacements.native,
-              loading: const AdsLoadingWidget(height: 140),
+              loading: const AdsLoadingWidget(height: 260),
               error: const SizedBox(
-                height: 140,
+                height: 260,
                 child: Center(child: Text('Native ad failed to load')),
               ),
               showRetryButton: true,
@@ -411,7 +453,37 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               onFailed: _onNativeFailed,
             )
           else
-            const AdsLoadingWidget(height: 140),
+            const AdsLoadingWidget(height: 260),
+          const SizedBox(height: 24),
+          const Text('Collapsible native'),
+          const SizedBox(height: 8),
+          if (_adsInitialized)
+            AdsCollapsibleNative(
+              nativePlacement: ExamplePlacements.collapsibleNative,
+              bannerPlacement: ExamplePlacements.collapsedBanner,
+              nativeHeight: 260,
+              bannerConfig: const BannerAdConfig.banner(),
+              nativeLoading: const AdsLoadingWidget(height: 260),
+              nativeError: const SizedBox(
+                height: 260,
+                child: Center(child: Text('Collapsible native failed to load')),
+              ),
+              bannerBackgroundColor: Colors.black,
+              showRetryButton: true,
+              onNativeLoaded: _onCollapsibleNativeLoaded,
+              onNativeFailed: _onCollapsibleNativeFailed,
+              onBannerLoaded: _onCollapsedBannerLoaded,
+              onBannerFailed: _onCollapsedBannerFailed,
+              onCollapsed: () => _setStatus('Collapsible native collapsed'),
+              onExpanded: () => _setStatus('Collapsible native expanded'),
+            )
+          else
+            const AdsLoadingWidget(height: 260),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: _openSecondPage,
+            child: const Text('Open second page'),
+          ),
           const SizedBox(height: 24),
           Wrap(
             spacing: 8,
@@ -449,6 +521,23 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
             child: const Text('Clear native cache'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ExampleSecondPage extends StatelessWidget {
+  const ExampleSecondPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Second page')),
+      body: Center(
+        child: FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Back to ads page'),
+        ),
       ),
     );
   }
