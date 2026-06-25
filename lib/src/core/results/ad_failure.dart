@@ -30,6 +30,11 @@ class AdFailure {
     Object? cause,
   ]) : this(code: 'missing_native_ad_factory', message: message, cause: cause);
 
+  /// No default service exists for the requested ad network.
+  const AdFailure.unsupportedNetwork([
+    String message = 'Unsupported ad network',
+  ]) : this(code: 'unsupported_network', message: message);
+
   /// An unknown error occurred.
   const AdFailure.unknown([String message = 'Unknown ads error', Object? cause])
     : this(code: 'unknown', message: message, cause: cause);

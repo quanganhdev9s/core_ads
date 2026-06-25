@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
+import 'core/enums/ad_network.dart';
 import 'core/enums/ad_type.dart';
 import 'core/reload/ads_reload_notifier.dart';
 import 'core/results/ad_failure.dart';
@@ -9,8 +10,10 @@ import 'core/results/ad_result.dart';
 import 'ads/banner/banner_ad_config.dart';
 import 'data/repositories/ads_repository_impl.dart';
 import 'domain/repositories/ads_repository.dart';
+import 'services/app_lovin_ads_service.dart';
 import 'services/ads_service.dart';
 import 'services/google_ads_service.dart';
+import 'consent/consent_manager.dart';
 import 'consent/google_consent_manager.dart';
 
 /// Public entry-point used by applications to interact with ads.
@@ -23,25 +26,51 @@ class AppAds {
   ///
   /// A custom [repository] can be provided by advanced integrations. Most apps
   /// should pass [config] and let the package create its internal repository.
+  ///
+  /// When [service] is omitted, [GoogleAdsService] and [GoogleConsentManager]
+  /// are used together. When [service] is provided, consent defaults to the
+  /// no-op [ConsentManager] unless [consentManager] is also provided.
   static Future<AdResult<void>> initialize(
     AdsConfig config, {
     AdsRepository? repository,
     AdsService? service,
+    ConsentManager? consentManager,
   }) async {
     if (repository != null) {
       _repository = repository;
       return _repository!.initialize();
     }
 
-    final resolvedService = service ?? GoogleAdsService();
+    final resolvedService = service ?? _defaultServiceFor(config.network);
+    if (resolvedService == null) {
+      return AdResult.failure(
+        AdFailure.unsupportedNetwork(
+          'No default service is registered for ${config.network.name}. '
+          'Pass a custom AdsService to AppAds.initialize.',
+        ),
+      );
+    }
+
+    final resolvedConsentManager =
+        consentManager ??
+        (service == null && config.network == AdNetwork.google
+            ? GoogleConsentManager()
+            : ConsentManager());
 
     _repository = AdsRepositoryImpl(
       config: config,
       service: resolvedService,
-      consentManager: service == null ? GoogleConsentManager() : null,
+      consentManager: resolvedConsentManager,
     );
 
     return _repository!.initialize();
+  }
+
+  static AdsService? _defaultServiceFor(AdNetwork network) {
+    return switch (network) {
+      AdNetwork.google => GoogleAdsService(),
+      AdNetwork.appLovin => AppLovinAdsService(),
+    };
   }
 
   /// Shows an interstitial ad for [placement] if one is ready.

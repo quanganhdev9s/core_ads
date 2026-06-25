@@ -1,0 +1,7 @@
+agent.md
+.agents/
+.codex/
+.DS_Store
+*.iml
+build/
+example/build/

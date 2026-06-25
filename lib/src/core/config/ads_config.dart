@@ -5,6 +5,7 @@ import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
 import 'ads_environment.dart';
+import 'app_lovin_ads_config.dart';
 import '../../ads/banner/banner_ad_config.dart';
 import '../../ads/native/native_ad_config.dart';
 
@@ -19,6 +20,7 @@ class AdsConfig {
     this.request = const AdsRequestConfig(),
     this.bannerAdConfigs = const BannerAdConfigs({}),
     this.nativeAdConfigs = const NativeAdConfigs({}),
+    this.appLovin,
     this.fullscreenCooldown = const FullscreenAdCooldownConfig(),
     this.callbacks = const AdsCallbacks(),
     this.enableDebugLogs = false,
@@ -44,6 +46,9 @@ class AdsConfig {
 
   /// Native ad rendering configuration by placement.
   final NativeAdConfigs nativeAdConfigs;
+
+  /// AppLovin MAX specific configuration.
+  final AppLovinAdsConfig? appLovin;
 
   /// Cooldown rules for fullscreen ads.
   final FullscreenAdCooldownConfig fullscreenCooldown;

@@ -144,6 +144,58 @@ AppAds.clearType(type);
 AppAds.dispose();
 ```
 
+Advanced integrations can inject their own service, repository, or consent
+manager:
+
+```dart
+await AppAds.initialize(
+  config,
+  service: GoogleAdsService(),
+  consentManager: GoogleConsentManager(),
+);
+```
+
+When no custom service is provided, the package uses `GoogleAdsService` with
+`GoogleConsentManager`. When a custom service is provided, consent defaults to a
+no-op `ConsentManager` unless the app also provides a `consentManager`.
+
+Use `AdNetwork.appLovin` with AppLovin MAX:
+
+```dart
+await AppAds.initialize(
+  AdsConfig(
+    environment: AdsEnvironment.production,
+    network: AdNetwork.appLovin,
+    appLovin: AppLovinAdsConfig(sdkKey: 'YOUR_SDK_KEY'),
+    adUnitIds: AdUnitIds({
+      AppAdPlacements.levelCompleteInterstitial: 'APPLOVIN_INTER_AD_UNIT_ID',
+      AppAdPlacements.doubleReward: 'APPLOVIN_REWARDED_AD_UNIT_ID',
+      AppAdPlacements.appOpen: 'APPLOVIN_APP_OPEN_AD_UNIT_ID',
+    }),
+  ),
+);
+```
+
+`AppLovinAdsService` currently supports interstitial, rewarded, and app open
+ads. Banner, native, and rewarded interstitial return `unsupported_ad_type`
+until those formats are implemented.
+
+AppLovin fullscreen ads are keyed by ad unit ID inside the AppLovin SDK. Prefer
+one fullscreen placement per AppLovin ad unit ID.
+
+For development flows that should not call a real SDK, use `MemoryAdsService`:
+
+```dart
+await AppAds.initialize(
+  config,
+  service: MemoryAdsService(),
+  consentManager: ConsentManager(),
+);
+```
+
+When a custom service is used, keep `AdsConfig.network` aligned with that
+service so failure callbacks are attributed to the correct network.
+
 ## Banner
 
 Use `AdsBanner` for widget-rendered banner ads:
@@ -352,8 +404,15 @@ await AppAds.handleAppResume(AppAdPlacements.appOpen);
 
 ## Consent And ATT
 
-Google UMP runs during initialization when consent is enabled. Ads are requested
-only when UMP reports that ads can be requested.
+Google UMP runs during initialization when consent is enabled and the default
+Google setup is used. Ads are requested only when the active consent manager
+reports that ads can be requested.
+
+Custom services do not automatically use Google UMP. For example, an AppLovin
+MAX service should only use `GoogleConsentManager` when the host app wants UMP
+to handle consent, such as when Google demand is part of mediation. Otherwise,
+provide a custom `ConsentManager` or let the app handle consent before
+initializing ads.
 
 For consent testing:
 
@@ -419,6 +478,7 @@ Every operation returns `AdResult<void>`. Important failure codes:
 - `missing_native_ad_factory`: platform native factory was not registered.
 - `test_ad_unit_in_production`: production config contains Google sample ad
   unit IDs.
+- `unsupported_network`: no default service exists for `AdsConfig.network`.
 - `invalid_request`: the Google SDK rejected the ad request.
 - `network_error`: network failed while loading/showing an ad.
 - `no_fill`: the ad network returned no fill.

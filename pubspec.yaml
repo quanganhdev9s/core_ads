@@ -1,5 +1,5 @@
 name: core_ads
-description: A reusable Flutter ads package with placement-based APIs, Google Mobile Ads support, consent, and production-ready lifecycle handling.
+description: A reusable Flutter ads package with placement-based APIs, Google Mobile Ads, AppLovin MAX, consent, and production-ready lifecycle handling.
 version: 0.0.1
 
 environment:
@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   app_tracking_transparency: ^2.0.7
+  applovin_max: ^4.6.4
   flutter:
     sdk: flutter
   google_mobile_ads: ^9.0.0
