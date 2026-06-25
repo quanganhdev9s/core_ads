@@ -352,6 +352,21 @@ await AppAds.showRewardedInterstitial(
 Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
 interstitial, and app open ads cannot show on top of each other.
 
+By default, each fullscreen placement preloads again after a successful show.
+Disable this per placement when the app wants to decide the next preload moment
+manually:
+
+```dart
+AdsConfig(
+  environment: AdsEnvironment.production,
+  adUnitIds: AdUnitIds({}),
+  preloadAfterShowByPlacement: {
+    AppAdPlacements.levelCompleteInterstitial: false,
+    AppAdPlacements.appOpen: true,
+  },
+);
+```
+
 Default fullscreen cooldowns are 7 seconds:
 
 - interstitial to interstitial

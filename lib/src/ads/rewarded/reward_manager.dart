@@ -15,12 +15,14 @@ class RewardManager implements AdManager {
     required this.consentManager,
     required this.placement,
     required this.fullscreenAdController,
+    required this.preloadAfterShow,
   });
 
   final AdsService service;
   final ConsentManager consentManager;
   final AdPlacement placement;
   final FullscreenAdController fullscreenAdController;
+  final bool preloadAfterShow;
 
   AdLoadStatus _status = AdLoadStatus.idle;
 
@@ -63,7 +65,7 @@ class RewardManager implements AdManager {
     }
     _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
 
-    if (result.isSuccess) {
+    if (result.isSuccess && preloadAfterShow) {
       await load();
     }
 

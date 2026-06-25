@@ -17,7 +17,8 @@ class AppOpenManager implements AdManager {
     required this.placement,
     required this.fullscreenAdController,
     required this.fullscreenCooldown,
-    this.expiration = const Duration(minutes : 60),
+    required this.preloadAfterShow,
+    this.expiration = const Duration(minutes: 60),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -26,6 +27,7 @@ class AppOpenManager implements AdManager {
   final AdPlacement placement;
   final FullscreenAdController fullscreenAdController;
   final FullscreenAdCooldownConfig fullscreenCooldown;
+  final bool preloadAfterShow;
   final Duration expiration;
   final DateTime Function() _now;
 
@@ -114,7 +116,9 @@ class AppOpenManager implements AdManager {
 
     if (result.isSuccess) {
       fullscreenAdController.markShown(placement);
-      await load();
+      if (preloadAfterShow) {
+        await load();
+      }
     }
 
     return result;
