@@ -2,7 +2,7 @@ import 'package:core_ads/core_ads.dart';
 import 'package:flutter/material.dart';
 
 import '../ads/example_ad_configs.dart';
-import '../ads/example_ad_unit_ids.dart';
+import '../ads/example_ads_manager.dart';
 import '../ads/example_placements.dart';
 import 'example_second_page.dart';
 
@@ -14,6 +14,7 @@ class AdsExamplePage extends StatefulWidget {
 }
 
 class _AdsExamplePageState extends State<AdsExamplePage> {
+  late final ExampleAdsManager _adsManager;
   late final AdsAppLifecycleObserver _lifecycleObserver;
 
   String _status = 'Not initialized';
@@ -27,6 +28,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   @override
   void initState() {
     super.initState();
+    _adsManager = ExampleAdsManager();
     _lifecycleObserver = AdsAppLifecycleObserver(
       appOpenPlacement: ExamplePlacements.appOpen,
     )..attach();
@@ -36,7 +38,8 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   @override
   void dispose() {
     _lifecycleObserver.detach();
-    AppAds.dispose();
+    _adsManager.disposeAds();
+    _adsManager.dispose();
     super.dispose();
   }
 
@@ -58,63 +61,32 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   Future<void> _initializeAds() async {
     _setStatus('Initializing');
 
-    final result = await AppAds.initialize(
-      AdsConfig(
-        environment: AdsEnvironment.test,
-        adUnitIds: AdUnitIds({
-          ExamplePlacements.banner: ExampleAdUnitIds.banner,
-          ExamplePlacements.collapsedBanner: ExampleAdUnitIds.banner,
-          ExamplePlacements.interstitial: ExampleAdUnitIds.interstitial,
-          ExamplePlacements.splashInterstitial: ExampleAdUnitIds.interstitial,
-          ExamplePlacements.returnHomeInterstitial:
-              ExampleAdUnitIds.interstitial,
-          ExamplePlacements.rewarded: ExampleAdUnitIds.rewarded,
-          ExamplePlacements.rewardedInterstitial:
-              ExampleAdUnitIds.rewardedInterstitial,
-          ExamplePlacements.appOpen: ExampleAdUnitIds.appOpen,
-          ExamplePlacements.native: ExampleAdUnitIds.native,
-          ExamplePlacements.collapsibleNative: ExampleAdUnitIds.native,
-        }),
-        bannerAdConfigs: BannerAdConfigs({
-          ExamplePlacements.banner: ExampleAdConfigs.banner,
-          ExamplePlacements.collapsedBanner: ExampleAdConfigs.collapsedBanner,
-        }),
-        nativeAdConfigs: NativeAdConfigs({
-          ExamplePlacements.native: ExampleAdConfigs.native,
-          ExamplePlacements.collapsibleNative: ExampleAdConfigs.native,
-        }),
-        consent: const AdsConsentConfig(
-          enabled: true,
-          requestTrackingAuthorizationOnIos: true,
+    final result = await _adsManager.initialize(
+      callbacks: AdsCallbacks(
+        onLoaded: (event) {
+          _setAdState(event.placement, 'ready');
+          _setStatus('Loaded ${event.placement.key}');
+        },
+        onFailed: (event) {
+          _setAdState(event.placement, 'failed: ${event.failure.code}');
+          _setStatus('Failed ${event.placement.key}: ${event.failure.code}');
+        },
+        onShown: (event) {
+          _setAdState(event.placement, 'shown');
+          _setStatus('Shown ${event.placement.key}');
+        },
+        onDismissed: (event) {
+          _setAdState(event.placement, 'dismissed');
+          _setStatus('Dismissed ${event.placement.key}');
+        },
+        onImpression: (event) =>
+            _setStatus('Impression ${event.placement.key}'),
+        onPaid: (event) => _setStatus(
+          'Paid ${event.placement.key}: ${event.valueMicros} ${event.currencyCode}',
         ),
-        // fullscreenCooldown: const FullscreenAdCooldownConfig(),
-        callbacks: AdsCallbacks(
-          onLoaded: (event) {
-            _setAdState(event.placement, 'ready');
-            _setStatus('Loaded ${event.placement.key}');
-          },
-          onFailed: (event) {
-            _setAdState(event.placement, 'failed: ${event.failure.code}');
-            _setStatus('Failed ${event.placement.key}: ${event.failure.code}');
-          },
-          onShown: (event) {
-            _setAdState(event.placement, 'shown');
-            _setStatus('Shown ${event.placement.key}');
-          },
-          onDismissed: (event) {
-            _setAdState(event.placement, 'dismissed');
-            _setStatus('Dismissed ${event.placement.key}');
-          },
-          onImpression: (event) =>
-              _setStatus('Impression ${event.placement.key}'),
-          onPaid: (event) => _setStatus(
-            'Paid ${event.placement.key}: ${event.valueMicros} ${event.currencyCode}',
-          ),
-          onRewardEarned: (event) => _setStatus(
-            'Reward event ${event.placement.key}: ${event.amount} ${event.rewardType}',
-          ),
+        onRewardEarned: (event) => _setStatus(
+          'Reward event ${event.placement.key}: ${event.amount} ${event.rewardType}',
         ),
-        enableDebugLogs: true,
       ),
     );
 
@@ -135,7 +107,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
 
   Future<void> _showSplashInterstitial() async {
     _setAdState(ExamplePlacements.splashInterstitial, 'loading');
-    final loadResult = await AppAds.load(ExamplePlacements.splashInterstitial);
+    final loadResult = await _adsManager.load(
+      ExamplePlacements.splashInterstitial,
+    );
     if (loadResult.isFailure) {
       _setAdState(
         ExamplePlacements.splashInterstitial,
@@ -146,7 +120,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     }
 
     _setAdState(ExamplePlacements.splashInterstitial, 'showing');
-    final showResult = await AppAds.showInterstitial(
+    final showResult = await _adsManager.showInterstitial(
       ExamplePlacements.splashInterstitial,
     );
     if (showResult.isFailure) {
@@ -172,7 +146,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
 
   Future<void> _loadPlacement(AdPlacement placement) async {
     _setAdState(placement, 'loading');
-    final result = await AppAds.load(placement);
+    final result = await _adsManager.load(placement);
     if (result.isFailure) {
       _setAdState(placement, 'failed: ${_failureCode(result)}');
     }
@@ -181,7 +155,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   Future<void> _showInterstitial() async {
     await _initialize();
     _setAdState(ExamplePlacements.interstitial, 'showing');
-    final result = await AppAds.showInterstitial(
+    final result = await _adsManager.showInterstitial(
       ExamplePlacements.interstitial,
     );
     if (result.isFailure) {
@@ -198,7 +172,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   Future<void> _showRewarded() async {
     await _initialize();
     _setAdState(ExamplePlacements.rewarded, 'showing');
-    final result = await AppAds.showRewarded(
+    final result = await _adsManager.showRewarded(
       placement: ExamplePlacements.rewarded,
       onRewardEarned: _grantReward,
     );
@@ -214,7 +188,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   Future<void> _showRewardedInterstitial() async {
     await _initialize();
     _setAdState(ExamplePlacements.rewardedInterstitial, 'showing');
-    final result = await AppAds.showRewardedInterstitial(
+    final result = await _adsManager.showRewardedInterstitial(
       placement: ExamplePlacements.rewardedInterstitial,
       onRewardEarned: _grantReward,
     );
@@ -234,7 +208,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   Future<void> _showAppOpen() async {
     await _initialize();
     _setAdState(ExamplePlacements.appOpen, 'showing');
-    final result = await AppAds.showAppOpen(ExamplePlacements.appOpen);
+    final result = await _adsManager.showAppOpen(ExamplePlacements.appOpen);
     if (result.isFailure) {
       _setAdState(
         ExamplePlacements.appOpen,
@@ -323,7 +297,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
 
   Future<void> _preloadReturnHomeInterstitial() async {
     _setAdState(ExamplePlacements.returnHomeInterstitial, 'loading');
-    final result = await AppAds.load(ExamplePlacements.returnHomeInterstitial);
+    final result = await _adsManager.load(
+      ExamplePlacements.returnHomeInterstitial,
+    );
     if (result.isFailure) {
       _setAdState(
         ExamplePlacements.returnHomeInterstitial,
@@ -334,7 +310,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
 
   Future<void> _showReturnHomeInterstitial() async {
     _setAdState(ExamplePlacements.returnHomeInterstitial, 'showing');
-    final result = await AppAds.showInterstitial(
+    final result = await _adsManager.showInterstitial(
       ExamplePlacements.returnHomeInterstitial,
     );
     if (result.isFailure) {
@@ -375,6 +351,26 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           Text('Status: $_status'),
           const SizedBox(height: 8),
           Text('Rewards: $_rewardCount'),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Premium user'),
+            value: _adsManager.isPremiumUser,
+            onChanged: (value) async {
+              setState(() {
+                _adsManager.setPremiumUser(value);
+                if (!value) {
+                  _adsInitialized = false;
+                  _initAdsFuture = null;
+                }
+                _status = value ? 'Premium enabled' : 'Premium disabled';
+              });
+
+              if (!value) {
+                await _initialize();
+              }
+            },
+          ),
           const SizedBox(height: 8),
           Text(_adStateText()),
           const SizedBox(height: 16),
@@ -472,15 +468,15 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           ),
           const SizedBox(height: 16),
           OutlinedButton(
-            onPressed: () => AppAds.clearType(AdType.interstitial),
+            onPressed: () => _adsManager.clearType(AdType.interstitial),
             child: const Text('Clear interstitial cache'),
           ),
           OutlinedButton(
-            onPressed: () => AppAds.clearType(AdType.banner),
+            onPressed: () => _adsManager.clearType(AdType.banner),
             child: const Text('Clear banner cache'),
           ),
           OutlinedButton(
-            onPressed: () => AppAds.clearType(AdType.native),
+            onPressed: () => _adsManager.clearType(AdType.native),
             child: const Text('Clear native cache'),
           ),
         ],
