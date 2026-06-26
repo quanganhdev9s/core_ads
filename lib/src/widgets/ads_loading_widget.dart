@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 /// Default loading placeholder used while an ad placement is loading.
 class AdsLoadingWidget extends StatelessWidget {
@@ -13,15 +14,11 @@ class AdsLoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: const Center(
-        child: SizedBox.square(
-          dimension: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+    return Shimmer(
+      gradient: const LinearGradient(
+        colors: [Colors.grey, Colors.white, Colors.grey],
       ),
+      child: Container(width: width, height: height, color: Colors.grey),
     );
   }
 }
