@@ -14,7 +14,6 @@ export 'src/core/events/ads_failure_event.dart';
 export 'src/core/events/ads_paid_event.dart';
 export 'src/core/events/ads_reward_event.dart';
 export 'src/core/fullscreen/fullscreen_ad_cooldown_config.dart';
-export 'src/core/navigation/ads_route_observer.dart';
 export 'src/core/results/ad_failure.dart';
 export 'src/core/results/ad_result.dart';
 export 'src/domain/repositories/ads_repository.dart';

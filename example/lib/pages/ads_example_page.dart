@@ -20,6 +20,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
   String _status = 'Not initialized';
   int _rewardCount = 0;
   bool _adsInitialized = false;
+  bool _collapsibleNativeExpanded = true;
   final Map<AdPlacement, String> _adStates = {
     for (final placement in ExamplePlacements.values) placement: 'idle',
   };
@@ -292,6 +293,11 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
       return;
     }
 
+    setState(() {
+      _collapsibleNativeExpanded = true;
+    });
+    _setStatus('Collapsible native expanded');
+
     await _showReturnHomeInterstitial();
   }
 
@@ -420,6 +426,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
             AdsCollapsibleNative(
               nativePlacement: ExamplePlacements.collapsibleNative,
               bannerPlacement: ExamplePlacements.collapsedBanner,
+              expanded: _collapsibleNativeExpanded,
               nativeHeight: 260,
               bannerConfig: ExampleAdConfigs.collapsedBanner,
               nativeLoading: const AdsLoadingWidget(height: 260),
@@ -433,8 +440,12 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               onNativeFailed: _onCollapsibleNativeFailed,
               onBannerLoaded: _onCollapsedBannerLoaded,
               onBannerFailed: _onCollapsedBannerFailed,
-              onCollapsed: () => _setStatus('Collapsible native collapsed'),
-              onExpanded: () => _setStatus('Collapsible native expanded'),
+              onCollapsed: () {
+                setState(() {
+                  _collapsibleNativeExpanded = false;
+                });
+                _setStatus('Collapsible native collapsed');
+              },
             )
           else
             const AdsLoadingWidget(height: 260),

@@ -294,30 +294,28 @@ class AppAdPlacements {
 }
 ```
 
-Add the route observer so the native ad can reopen when returning from another
-screen:
-
-```dart
-MaterialApp(
-  navigatorObservers: [AdsRouteObserver.instance],
-  home: const HomePage(),
-);
-```
+Keep the expanded state in the parent widget:
 
 Render the collapsible ad:
 
 ```dart
-const AdsCollapsibleNative(
+AdsCollapsibleNative(
   nativePlacement: AppAdPlacements.articleNative,
   bannerPlacement: AppAdPlacements.articleCollapsedBanner,
+  expanded: isNativeExpanded,
   nativeHeight: 140,
-  bannerConfig: BannerAdConfig.banner(),
+  bannerConfig: const BannerAdConfig.banner(),
+  onCollapsed: () {
+    setState(() {
+      isNativeExpanded = false;
+    });
+  },
 );
 ```
 
-When the user taps the close button, the native ad is cleared and replaced by
-the banner aligned to the bottom-right of the original native area. The native
-ad expands again only when a pushed route is popped back to this screen.
+When the user taps the close button, the native ad is replaced by the banner.
+If the app wants to expand the native ad again after navigation, listen for the
+route pop in the parent widget and set `isNativeExpanded = true`.
 
 ## Fullscreen Ads
 

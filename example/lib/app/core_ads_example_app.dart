@@ -1,4 +1,3 @@
-import 'package:core_ads/core_ads.dart';
 import 'package:flutter/material.dart';
 
 import '../pages/ads_example_page.dart';
@@ -14,7 +13,6 @@ class CoreAdsExampleApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      navigatorObservers: [AdsRouteObserver.instance],
       home: const AdsExamplePage(),
     );
   }

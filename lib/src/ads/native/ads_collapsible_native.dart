@@ -4,7 +4,6 @@ import '../../ads/banner/ads_banner.dart';
 import '../../ads/banner/banner_ad_config.dart';
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_type.dart';
-import '../../core/navigation/ads_route_observer.dart';
 import '../../core/results/ad_failure.dart';
 import '../../widgets/ads_loading_widget.dart';
 import 'ads_native.dart';
@@ -28,7 +27,7 @@ class AdsCollapsibleNative extends StatefulWidget {
     this.nativeHeight = 120,
     this.collapsedAlignment = Alignment.bottomCenter,
     this.closeButton,
-    this.reopenOnRoutePopNext = true,
+    this.expanded,
     this.nativeClearOnDispose = true,
     this.bannerClearOnDispose = true,
     this.showRetryButton = false,
@@ -37,7 +36,6 @@ class AdsCollapsibleNative extends StatefulWidget {
     this.onBannerLoaded,
     this.onBannerFailed,
     this.onCollapsed,
-    this.onExpanded,
   });
 
   /// Native placement shown while expanded.
@@ -84,8 +82,12 @@ class AdsCollapsibleNative extends StatefulWidget {
   /// Custom close button shown at the top-right of the native ad.
   final Widget? closeButton;
 
-  /// Whether the native ad expands again when a pushed route is popped.
-  final bool reopenOnRoutePopNext;
+  /// Whether the native ad is expanded.
+  ///
+  /// When null, this widget manages its own collapsed state. When provided,
+  /// the parent owns the state and should update this value from [onCollapsed]
+  /// or from app-level navigation events.
+  final bool? expanded;
 
   /// Whether the native ad is cleared when its widget is disposed.
   final bool nativeClearOnDispose;
@@ -111,17 +113,14 @@ class AdsCollapsibleNative extends StatefulWidget {
   /// Called when the user collapses the native ad.
   final VoidCallback? onCollapsed;
 
-  /// Called when the native ad expands again after returning to this route.
-  final VoidCallback? onExpanded;
-
   @override
   State<AdsCollapsibleNative> createState() => _AdsCollapsibleNativeState();
 }
 
-class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative>
-    with RouteAware {
-  PageRoute<dynamic>? _route;
+class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative> {
   bool _expanded = true;
+
+  bool get _isExpanded => widget.expanded ?? _expanded;
 
   @override
   void initState() {
@@ -137,49 +136,14 @@ class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final route = ModalRoute.of(context);
-    if (route is! PageRoute<dynamic> || route == _route) {
-      return;
-    }
-
-    final oldRoute = _route;
-    if (oldRoute != null) {
-      AdsRouteObserver.instance.unsubscribe(this);
-    }
-
-    _route = route;
-    AdsRouteObserver.instance.subscribe(this, route);
-  }
-
-  @override
-  void dispose() {
-    AdsRouteObserver.instance.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    if (!widget.reopenOnRoutePopNext || _expanded || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _expanded = true;
-    });
-    widget.onExpanded?.call();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final expanded = _isExpanded;
     return SizedBox(
       width: widget.width,
-      height: _expanded
+      height: expanded
           ? widget.nativeHeight
           : widget.bannerConfig.resolvedHeight,
-      child: _expanded ? _buildExpanded() : _buildCollapsed(),
+      child: expanded ? _buildExpanded() : _buildCollapsed(),
     );
   }
 
@@ -236,13 +200,15 @@ class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative>
   }
 
   void _collapse() {
-    if (!_expanded) {
+    if (!_isExpanded) {
       return;
     }
 
-    setState(() {
-      _expanded = false;
-    });
+    if (widget.expanded == null) {
+      setState(() {
+        _expanded = false;
+      });
+    }
     widget.onCollapsed?.call();
   }
 }
