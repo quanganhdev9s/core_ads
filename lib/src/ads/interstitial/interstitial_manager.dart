@@ -28,12 +28,35 @@ class InterstitialManager implements AdManager {
   final bool preloadAfterShow;
 
   AdLoadStatus _status = AdLoadStatus.idle;
+  Future<AdResult<void>>? _loadFuture;
 
   @override
   AdLoadStatus get status => _status;
 
   @override
   Future<AdResult<void>> load() async {
+    if (_status == AdLoadStatus.ready) {
+      return const AdResult.success(null);
+    }
+
+    final existingLoad = _loadFuture;
+    if (existingLoad != null) {
+      return existingLoad;
+    }
+
+    final loadFuture = _load();
+    _loadFuture = loadFuture;
+
+    try {
+      return await loadFuture;
+    } finally {
+      if (identical(_loadFuture, loadFuture)) {
+        _loadFuture = null;
+      }
+    }
+  }
+
+  Future<AdResult<void>> _load() async {
     if (!consentManager.canRequestAds) {
       _status = AdLoadStatus.failed;
       return const AdResult.failure(AdFailure.consentDenied());
@@ -85,6 +108,7 @@ class InterstitialManager implements AdManager {
 
   @override
   Future<void> dispose() async {
+    _loadFuture = null;
     _status = AdLoadStatus.disposed;
   }
 }

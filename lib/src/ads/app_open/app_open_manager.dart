@@ -34,6 +34,7 @@ class AppOpenManager implements AdManager {
   AdLoadStatus _status = AdLoadStatus.idle;
   DateTime? _loadedAt;
   bool _isShowing = false;
+  Future<AdResult<void>>? _loadFuture;
 
   @override
   AdLoadStatus get status => _status;
@@ -50,6 +51,28 @@ class AppOpenManager implements AdManager {
 
   @override
   Future<AdResult<void>> load() async {
+    if (_status == AdLoadStatus.ready) {
+      return const AdResult.success(null);
+    }
+
+    final existingLoad = _loadFuture;
+    if (existingLoad != null) {
+      return existingLoad;
+    }
+
+    final loadFuture = _load();
+    _loadFuture = loadFuture;
+
+    try {
+      return await loadFuture;
+    } finally {
+      if (identical(_loadFuture, loadFuture)) {
+        _loadFuture = null;
+      }
+    }
+  }
+
+  Future<AdResult<void>> _load() async {
     if (!consentManager.canRequestAds) {
       _status = AdLoadStatus.failed;
       return const AdResult.failure(AdFailure.consentDenied());
@@ -151,5 +174,6 @@ class AppOpenManager implements AdManager {
     _status = AdLoadStatus.disposed;
     _loadedAt = null;
     _isShowing = false;
+    _loadFuture = null;
   }
 }
