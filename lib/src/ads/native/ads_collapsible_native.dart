@@ -84,9 +84,8 @@ class AdsCollapsibleNative extends StatefulWidget {
 
   /// Whether the native ad is expanded.
   ///
-  /// When null, this widget manages its own collapsed state. When provided,
-  /// the parent owns the state and should update this value from [onCollapsed]
-  /// or from app-level navigation events.
+  /// When this value changes, the widget syncs its internal expanded state.
+  /// The close button can still collapse the ad locally.
   final bool? expanded;
 
   /// Whether the native ad is cleared when its widget is disposed.
@@ -120,8 +119,6 @@ class AdsCollapsibleNative extends StatefulWidget {
 class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative> {
   bool _expanded = true;
 
-  bool get _isExpanded => widget.expanded ?? _expanded;
-
   @override
   void initState() {
     super.initState();
@@ -133,17 +130,27 @@ class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative> {
       widget.bannerPlacement.type == AdType.banner,
       'bannerPlacement must use AdType.banner',
     );
+    _expanded = widget.expanded ?? true;
+  }
+
+  @override
+  void didUpdateWidget(covariant AdsCollapsibleNative oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final expanded = widget.expanded;
+    if (expanded != null && expanded != oldWidget.expanded) {
+      _expanded = expanded;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final expanded = _isExpanded;
     return SizedBox(
       width: widget.width,
-      height: expanded
+      height: _expanded
           ? widget.nativeHeight
           : widget.bannerConfig.resolvedHeight,
-      child: expanded ? _buildExpanded() : _buildCollapsed(),
+      child: _expanded ? _buildExpanded() : _buildCollapsed(),
     );
   }
 
@@ -200,15 +207,13 @@ class _AdsCollapsibleNativeState extends State<AdsCollapsibleNative> {
   }
 
   void _collapse() {
-    if (!_isExpanded) {
+    if (!_expanded) {
       return;
     }
 
-    if (widget.expanded == null) {
-      setState(() {
-        _expanded = false;
-      });
-    }
+    setState(() {
+      _expanded = false;
+    });
     widget.onCollapsed?.call();
   }
 }
