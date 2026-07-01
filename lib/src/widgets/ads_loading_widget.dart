@@ -4,7 +4,7 @@ import 'package:shimmer/shimmer.dart';
 /// Default loading placeholder used while an ad placement is loading.
 class AdsLoadingWidget extends StatelessWidget {
   /// Creates an ads loading widget.
-  const AdsLoadingWidget({super.key, this.width = 320, this.height = 50});
+  const AdsLoadingWidget({super.key, this.width = double.infinity, this.height = 50});
 
   /// Placeholder width.
   final double width;
