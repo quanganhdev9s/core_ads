@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
+import 'core/enums/ad_load_status.dart';
 import 'core/enums/ad_type.dart';
+import 'core/load/ads_load_notifier.dart';
 import 'core/reload/ads_reload_notifier.dart';
 import 'core/results/ad_failure.dart';
 import 'core/results/ad_result.dart';
@@ -18,6 +20,16 @@ class AppAds {
   AppAds._();
 
   static AdsRepository? _repository;
+
+  /// Adds a listener for placement load state changes.
+  static void addLoadListener(AdsLoadListener listener) {
+    AdsLoadNotifier.instance.addListener(listener);
+  }
+
+  /// Removes a listener for placement load state changes.
+  static void removeLoadListener(AdsLoadListener listener) {
+    AdsLoadNotifier.instance.removeListener(listener);
+  }
 
   /// Initializes the ads package.
   ///
@@ -121,10 +133,20 @@ class AppAds {
   }) {
     final repository = _repository;
     if (repository == null) {
+      AdsLoadNotifier.instance.notify(
+        placement,
+        AdLoadStatus.failed,
+        failure: const AdFailure.notReady(),
+      );
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
     return repository.load(placement, bannerConfig: bannerConfig);
+  }
+
+  /// Returns current load/cache status for [placement].
+  static AdLoadStatus loadStatusOf(AdPlacement placement) {
+    return _repository?.loadStatusOf(placement) ?? AdLoadStatus.idle;
   }
 
   /// Builds a banner widget for [placement].

@@ -20,6 +20,7 @@ class ExamplePlacements {
   static const interstitial = AdPlacement(
     key: 'example_interstitial',
     type: AdType.interstitial,
+    preloadAfterShow: false,
   );
 
   static const splashInterstitial = AdPlacement(

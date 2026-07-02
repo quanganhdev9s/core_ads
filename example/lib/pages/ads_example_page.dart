@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../ads/example_ad_configs.dart';
 import '../ads/example_ads_manager.dart';
 import '../ads/example_placements.dart';
+import '../widgets/interstitial_action_button.dart';
 import 'example_second_page.dart';
 
 class AdsExamplePage extends StatefulWidget {
@@ -33,11 +34,13 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     _lifecycleObserver = AdsAppLifecycleObserver(
       appOpenPlacement: ExamplePlacements.appOpen,
     )..attach();
+    AppAds.addLoadListener(_handleAdLoad);
     _initialize();
   }
 
   @override
   void dispose() {
+    AppAds.removeLoadListener(_handleAdLoad);
     _lifecycleObserver.detach();
     _adsManager.disposeAds();
     _adsManager.dispose();
@@ -64,13 +67,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
 
     final result = await _adsManager.initialize(
       callbacks: AdsCallbacks(
-        onLoaded: (event) {
-          _setAdState(event.placement, 'ready');
-          _setStatus('Loaded ${event.placement.key}');
-        },
         onFailed: (event) {
           _setAdState(event.placement, 'failed: ${event.failure.code}');
-          _setStatus('Failed ${event.placement.key}: ${event.failure.code}');
+          // _setStatus('Failed ${event.placement.key}: ${event.failure.code}');
         },
         onShown: (event) {
           _setAdState(event.placement, 'shown');
@@ -104,6 +103,22 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
       await _showSplashInterstitial();
       _loadPlacement(ExamplePlacements.appOpen);
     }
+  }
+
+  void _handleAdLoad(AdsLoadEvent event) {
+    if (!mounted) {
+      return;
+    }
+
+    final state = switch (event.status) {
+      AdLoadStatus.idle => 'idle',
+      AdLoadStatus.loading => 'loading',
+      AdLoadStatus.ready => 'ready',
+      AdLoadStatus.failed => 'failed: ${event.failure?.code ?? 'unknown'}',
+    };
+
+    _setAdState(event.placement, state);
+    _setStatus('Load ${event.placement.key}: $state');
   }
 
   Future<void> _showSplashInterstitial() async {
@@ -459,9 +474,10 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              OutlinedButton(
-                onPressed: _showInterstitial,
-                child: const Text('Interstitial'),
+              InterstitialActionButton(
+                placement: ExamplePlacements.interstitial,
+                onLoad: () {},
+                onShow: () {},
               ),
               OutlinedButton(
                 onPressed: _showRewarded,

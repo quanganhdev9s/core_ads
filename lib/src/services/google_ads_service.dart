@@ -877,6 +877,7 @@ class GoogleAdsService implements AdsService {
   }
 
   void _emitImpression(AdPlacement placement) {
+    _logger.log('${placement.key} ${placement.type.name} impression');
     _config?.callbacks.onImpression?.call(_event(placement));
   }
 

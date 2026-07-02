@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
+import '../../core/enums/ad_load_status.dart';
 import '../../core/enums/ad_type.dart';
 import '../../core/results/ad_result.dart';
 import '../../ads/banner/banner_ad_config.dart';
@@ -15,6 +16,9 @@ abstract interface class AdsRepository {
     AdPlacement placement, {
     BannerAdConfig? bannerConfig,
   });
+
+  /// Returns current load/cache status for [placement].
+  AdLoadStatus loadStatusOf(AdPlacement placement);
 
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);

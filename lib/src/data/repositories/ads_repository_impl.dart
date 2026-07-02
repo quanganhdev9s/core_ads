@@ -5,8 +5,10 @@ import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
 import '../../core/events/ads_failure_event.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
+import '../../core/load/ads_load_notifier.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
+import '../../core/enums/ad_load_status.dart';
 import '../../domain/repositories/ads_repository.dart';
 import '../../ads/app_open/app_open_manager.dart';
 import '../../ads/banner/banner_ad_config.dart';
@@ -74,6 +76,8 @@ class AdsRepositoryImpl implements AdsRepository {
     AdPlacement placement, {
     BannerAdConfig? bannerConfig,
   }) async {
+    AdsLoadNotifier.instance.notify(placement, AdLoadStatus.loading);
+
     final result = await switch (placement.type) {
       AdType.banner => _bannerManager(placement).load(config: bannerConfig),
       AdType.interstitial => _interstitialManager(placement).load(),
@@ -85,8 +89,35 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.appOpen => _appOpenManager(placement).load(),
     };
 
+    switch (result) {
+      case AdSuccess<void>():
+        AdsLoadNotifier.instance.notify(placement, AdLoadStatus.ready);
+      case AdFailed<void>(failure: final failure):
+        AdsLoadNotifier.instance.notify(
+          placement,
+          AdLoadStatus.failed,
+          failure: failure,
+        );
+    }
+
     _emitLoadFailure(placement, result);
     return result;
+  }
+
+  @override
+  AdLoadStatus loadStatusOf(AdPlacement placement) {
+    return switch (placement.type) {
+      AdType.banner => _bannerManagers[placement]?.status ?? AdLoadStatus.idle,
+      AdType.interstitial =>
+        _interstitialManagers[placement]?.status ?? AdLoadStatus.idle,
+      AdType.rewarded =>
+        _rewardManagers[placement]?.status ?? AdLoadStatus.idle,
+      AdType.rewardedInterstitial =>
+        _rewardedInterstitialManagers[placement]?.status ?? AdLoadStatus.idle,
+      AdType.native => _nativeManagers[placement]?.status ?? AdLoadStatus.idle,
+      AdType.appOpen =>
+        _appOpenManagers[placement]?.status ?? AdLoadStatus.idle,
+    };
   }
 
   @override

@@ -186,6 +186,9 @@ class ExampleAdsManager extends ChangeNotifier {
       consent: const AdsConsentConfig(
         enabled: true,
         requestTrackingAuthorizationOnIos: true,
+        testDeviceIds: [
+          'B3EEABB8EE11C2BE770B684D95219ECB',
+        ]
       ),
       callbacks: _wrapCallbacks(callbacks),
       enableDebugLogs: true,
