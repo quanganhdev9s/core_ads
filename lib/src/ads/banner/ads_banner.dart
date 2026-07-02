@@ -61,6 +61,7 @@ class AdsBanner extends StatefulWidget {
 class _AdsBannerState extends State<AdsBanner> {
   Future<AdResult<void>>? _loadFuture;
   BannerAdConfig? _resolvedConfig;
+  BannerAdConfig? _scheduledLoadConfig;
   int _loadToken = 0;
 
   @override
@@ -90,7 +91,13 @@ class _AdsBannerState extends State<AdsBanner> {
     if (oldWidget.placement != widget.placement ||
         oldWidget.config != widget.config) {
       _resolvedConfig = null;
-      _loadFuture = _load(widget.config);
+      _scheduledLoadConfig = null;
+      if (widget.config.needsResolvedWidth) {
+        _loadFuture = null;
+      } else {
+        _resolvedConfig = widget.config;
+        _loadFuture = _load(widget.config);
+      }
     }
   }
 
@@ -101,7 +108,8 @@ class _AdsBannerState extends State<AdsBanner> {
         final resolvedConfig = _resolveConfig(constraints);
         if (_resolvedConfig != resolvedConfig) {
           _resolvedConfig = resolvedConfig;
-          _loadFuture = _load(resolvedConfig);
+          _loadFuture = null;
+          _scheduleLoad(resolvedConfig);
         }
 
         return FutureBuilder<AdResult<void>>(
@@ -154,6 +162,24 @@ class _AdsBannerState extends State<AdsBanner> {
       }
 
       return result;
+    });
+  }
+
+  void _scheduleLoad(BannerAdConfig config) {
+    if (_scheduledLoadConfig == config) {
+      return;
+    }
+
+    _scheduledLoadConfig = config;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _resolvedConfig != config) {
+        return;
+      }
+
+      _scheduledLoadConfig = null;
+      setState(() {
+        _loadFuture = _load(config);
+      });
     });
   }
 
