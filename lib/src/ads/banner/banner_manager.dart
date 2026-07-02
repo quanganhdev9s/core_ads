@@ -48,6 +48,6 @@ class BannerManager implements AdManager {
 
   @override
   Future<void> dispose() async {
-    _status = AdLoadStatus.disposed;
+    _status = AdLoadStatus.idle;
   }
 }

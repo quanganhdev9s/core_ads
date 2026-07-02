@@ -94,7 +94,7 @@ class InterstitialManager implements AdManager {
     } finally {
       fullscreenAdController.release(placement);
     }
-    _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
+    _status = result.isSuccess ? AdLoadStatus.idle : AdLoadStatus.failed;
 
     if (result.isSuccess) {
       fullscreenAdController.markShown(placement);
@@ -109,6 +109,6 @@ class InterstitialManager implements AdManager {
   @override
   Future<void> dispose() async {
     _loadFuture = null;
-    _status = AdLoadStatus.disposed;
+    _status = AdLoadStatus.idle;
   }
 }

@@ -1,4 +1,4 @@
-/// Represents the lifecycle state of an ad instance.
+/// Represents the current load/cache state of an ad placement.
 enum AdLoadStatus {
   /// No load request has been started.
   idle,
@@ -11,10 +11,4 @@ enum AdLoadStatus {
 
   /// The last load request failed.
   failed,
-
-  /// The ad has been shown.
-  shown,
-
-  /// The ad has been disposed.
-  disposed,
 }

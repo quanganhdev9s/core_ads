@@ -70,7 +70,7 @@ class MemoryAdsService implements AdsService {
       return const AdResult.failure(AdFailure.notReady());
     }
 
-    _statuses[placement] = AdLoadStatus.shown;
+    _statuses[placement] = AdLoadStatus.idle;
     _logger.log('${placement.key} shown by memory service');
 
     return const AdResult.success(null);

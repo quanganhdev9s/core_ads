@@ -135,7 +135,7 @@ class AppOpenManager implements AdManager {
       _isShowing = false;
       fullscreenAdController.release(placement);
     }
-    _status = result.isSuccess ? AdLoadStatus.shown : AdLoadStatus.failed;
+    _status = result.isSuccess ? AdLoadStatus.idle : AdLoadStatus.failed;
 
     if (result.isSuccess) {
       fullscreenAdController.markShown(placement);
@@ -171,7 +171,7 @@ class AppOpenManager implements AdManager {
 
   @override
   Future<void> dispose() async {
-    _status = AdLoadStatus.disposed;
+    _status = AdLoadStatus.idle;
     _loadedAt = null;
     _isShowing = false;
     _loadFuture = null;
