@@ -223,12 +223,16 @@ class _DefaultCloseButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: Colors.grey.shade300,
         shape: BoxShape.circle,
       ),
       child: const SizedBox.square(
-        dimension: 28,
-        child: Icon(Icons.expand_more_rounded),
+        dimension: 24,
+        child: Icon(
+          Icons.keyboard_arrow_down_rounded,
+          size: 20,
+          color: Colors.black,
+        ),
       ),
     );
   }

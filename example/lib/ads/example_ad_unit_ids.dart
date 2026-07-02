@@ -3,6 +3,8 @@ import 'dart:io';
 class ExampleAdUnitIds {
   const ExampleAdUnitIds._();
 
+  static const invalid = 'invalid-ad-unit-id';
+
   static String get banner {
     return Platform.isIOS
         ? 'ca-app-pub-3940256099942544/2934735716'

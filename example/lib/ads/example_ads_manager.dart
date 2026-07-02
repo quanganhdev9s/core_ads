@@ -142,18 +142,38 @@ class ExampleAdsManager extends ChangeNotifier {
   AdsConfig _config(AdsCallbacks callbacks) {
     return AdsConfig(
       environment: AdsEnvironment.test,
-      adUnitIds: AdUnitIds({
-        ExamplePlacements.banner: ExampleAdUnitIds.banner,
-        ExamplePlacements.collapsedBanner: ExampleAdUnitIds.banner,
-        ExamplePlacements.interstitial: ExampleAdUnitIds.interstitial,
-        ExamplePlacements.splashInterstitial: ExampleAdUnitIds.interstitial,
-        ExamplePlacements.returnHomeInterstitial: ExampleAdUnitIds.interstitial,
-        ExamplePlacements.rewarded: ExampleAdUnitIds.rewarded,
-        ExamplePlacements.rewardedInterstitial:
-            ExampleAdUnitIds.rewardedInterstitial,
-        ExamplePlacements.appOpen: ExampleAdUnitIds.appOpen,
-        ExamplePlacements.native: ExampleAdUnitIds.native,
-        ExamplePlacements.collapsibleNative: ExampleAdUnitIds.native,
+      adUnitIds: AdUnitIds.typed({
+        ExamplePlacements.banner: AdUnitId.single(ExampleAdUnitIds.banner),
+        ExamplePlacements.collapsedBanner: AdUnitId.single(
+          ExampleAdUnitIds.banner,
+        ),
+        ExamplePlacements.interstitial: AdUnitId.waterfall([
+          ExampleAdUnitIds.invalid,
+          ExampleAdUnitIds.interstitial,
+        ]),
+        ExamplePlacements.splashInterstitial: AdUnitId.waterfall([
+          ExampleAdUnitIds.interstitial,
+          ExampleAdUnitIds.interstitial,
+        ]),
+        ExamplePlacements.returnHomeInterstitial: AdUnitId.waterfall([
+          ExampleAdUnitIds.interstitial,
+          ExampleAdUnitIds.interstitial,
+        ]),
+        ExamplePlacements.rewarded: AdUnitId.waterfall([
+          ExampleAdUnitIds.invalid,
+          ExampleAdUnitIds.rewarded,
+        ]),
+        ExamplePlacements.rewardedInterstitial: AdUnitId.single(
+          ExampleAdUnitIds.rewardedInterstitial,
+        ),
+        ExamplePlacements.appOpen: AdUnitId.waterfall([
+          ExampleAdUnitIds.invalid,
+          ExampleAdUnitIds.appOpen,
+        ]),
+        ExamplePlacements.native: AdUnitId.single(ExampleAdUnitIds.native),
+        ExamplePlacements.collapsibleNative: AdUnitId.single(
+          ExampleAdUnitIds.native,
+        ),
       }),
       bannerAdConfigs: BannerAdConfigs({
         ExamplePlacements.banner: ExampleAdConfigs.banner,

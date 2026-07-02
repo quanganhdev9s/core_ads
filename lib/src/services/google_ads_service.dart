@@ -16,6 +16,7 @@ import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../ads/banner/banner_ad_config.dart';
+import '../ads/native/native_ad_config.dart';
 import 'ads_service.dart';
 
 /// Google Mobile Ads implementation of [AdsService].
@@ -316,8 +317,8 @@ class GoogleAdsService implements AdsService {
     AdPlacement placement, {
     BannerAdConfig? config,
   }) async {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return _missingAdUnitId(placement);
     }
 
@@ -335,8 +336,24 @@ class GoogleAdsService implements AdsService {
       );
     }
 
-    final completer = Completer<AdResult<void>>();
     _bannerAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) => _loadBannerWithAdUnitId(
+        placement,
+        adUnitId: adUnitId,
+        adSize: adSize,
+      ),
+    );
+  }
+
+  Future<AdResult<void>> _loadBannerWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+    required AdSize adSize,
+  }) async {
+    final completer = Completer<AdResult<void>>();
 
     final bannerAd = BannerAd(
       adUnitId: adUnitId,
@@ -388,8 +405,8 @@ class GoogleAdsService implements AdsService {
   }
 
   Future<AdResult<void>> _loadNative(AdPlacement placement) async {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return _missingAdUnitId(placement);
     }
 
@@ -403,8 +420,24 @@ class GoogleAdsService implements AdsService {
       );
     }
 
-    final completer = Completer<AdResult<void>>();
     _nativeAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) => _loadNativeWithAdUnitId(
+        placement,
+        adUnitId: adUnitId,
+        nativeConfig: nativeConfig,
+      ),
+    );
+  }
+
+  Future<AdResult<void>> _loadNativeWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+    required NativeAdConfig nativeConfig,
+  }) async {
+    final completer = Completer<AdResult<void>>();
 
     final nativeAd = NativeAd(
       adUnitId: adUnitId,
@@ -442,13 +475,25 @@ class GoogleAdsService implements AdsService {
   }
 
   Future<AdResult<void>> _loadInterstitial(AdPlacement placement) {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return Future.value(_missingAdUnitId(placement));
     }
 
-    final completer = Completer<AdResult<void>>();
     _interstitialAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) =>
+          _loadInterstitialWithAdUnitId(placement, adUnitId: adUnitId),
+    );
+  }
+
+  Future<AdResult<void>> _loadInterstitialWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+  }) {
+    final completer = Completer<AdResult<void>>();
 
     try {
       InterstitialAd.load(
@@ -477,13 +522,25 @@ class GoogleAdsService implements AdsService {
   }
 
   Future<AdResult<void>> _loadRewarded(AdPlacement placement) {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return Future.value(_missingAdUnitId(placement));
     }
 
-    final completer = Completer<AdResult<void>>();
     _rewardedAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) =>
+          _loadRewardedWithAdUnitId(placement, adUnitId: adUnitId),
+    );
+  }
+
+  Future<AdResult<void>> _loadRewardedWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+  }) {
+    final completer = Completer<AdResult<void>>();
 
     try {
       RewardedAd.load(
@@ -512,13 +569,25 @@ class GoogleAdsService implements AdsService {
   }
 
   Future<AdResult<void>> _loadRewardedInterstitial(AdPlacement placement) {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return Future.value(_missingAdUnitId(placement));
     }
 
-    final completer = Completer<AdResult<void>>();
     _rewardedInterstitialAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) =>
+          _loadRewardedInterstitialWithAdUnitId(placement, adUnitId: adUnitId),
+    );
+  }
+
+  Future<AdResult<void>> _loadRewardedInterstitialWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+  }) {
+    final completer = Completer<AdResult<void>>();
 
     try {
       RewardedInterstitialAd.load(
@@ -547,13 +616,25 @@ class GoogleAdsService implements AdsService {
   }
 
   Future<AdResult<void>> _loadAppOpen(AdPlacement placement) {
-    final adUnitId = _adUnitIdFor(placement);
-    if (adUnitId == null) {
+    final adUnitIds = _adUnitIdsFor(placement);
+    if (adUnitIds.isEmpty) {
       return Future.value(_missingAdUnitId(placement));
     }
 
-    final completer = Completer<AdResult<void>>();
     _appOpenAds.remove(placement)?.dispose();
+    return _loadWaterfall(
+      placement: placement,
+      adUnitIds: adUnitIds,
+      load: (adUnitId) =>
+          _loadAppOpenWithAdUnitId(placement, adUnitId: adUnitId),
+    );
+  }
+
+  Future<AdResult<void>> _loadAppOpenWithAdUnitId(
+    AdPlacement placement, {
+    required String adUnitId,
+  }) {
+    final completer = Completer<AdResult<void>>();
 
     try {
       AppOpenAd.load(
@@ -691,8 +772,41 @@ class GoogleAdsService implements AdsService {
     );
   }
 
-  String? _adUnitIdFor(AdPlacement placement) {
-    return _config?.adUnitIds.idFor(placement);
+  Future<AdResult<void>> _loadWaterfall({
+    required AdPlacement placement,
+    required List<String> adUnitIds,
+    required Future<AdResult<void>> Function(String adUnitId) load,
+  }) async {
+    AdFailure? lastFailure;
+
+    for (var index = 0; index < adUnitIds.length; index++) {
+      final adUnitId = adUnitIds[index];
+      final result = await load(adUnitId);
+      if (result.isSuccess) {
+        if (index > 0) {
+          _logger.log('${placement.key} loaded from waterfall index=$index');
+        }
+        return result;
+      }
+
+      final failure = (result as AdFailed<void>).failure;
+      lastFailure = failure;
+      _logger.log(
+        '${placement.key} waterfall index=$index failed: ${failure.code}',
+      );
+    }
+
+    return AdResult.failure(
+      lastFailure ??
+          AdFailure(
+            code: 'missing_ad_unit_id',
+            message: 'Missing ad unit ID for placement ${placement.key}.',
+          ),
+    );
+  }
+
+  List<String> _adUnitIdsFor(AdPlacement placement) {
+    return _config?.adUnitIds.idsFor(placement) ?? const <String>[];
   }
 
   AdFailure? _validateProductionAdUnitIds(AdsConfig config) {
@@ -700,8 +814,8 @@ class GoogleAdsService implements AdsService {
       return null;
     }
 
-    final testPlacements = config.adUnitIds.values.entries
-        .where((entry) => _isGoogleSampleAdUnitId(entry.value))
+    final testPlacements = config.adUnitIds.typedValues.entries
+        .where((entry) => entry.value.ids.any(_isGoogleSampleAdUnitId))
         .map((entry) => entry.key.key)
         .toList(growable: false);
 

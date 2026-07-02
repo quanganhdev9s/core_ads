@@ -52,12 +52,18 @@ is used in the app.
 await AppAds.initialize(
   AdsConfig(
     environment: AdsEnvironment.production,
-    adUnitIds: AdUnitIds({
-      AppAdPlacements.homeBanner: 'ca-app-pub-xxx/banner',
-      AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
-      AppAdPlacements.levelCompleteInterstitial: 'ca-app-pub-xxx/interstitial',
-      AppAdPlacements.doubleReward: 'ca-app-pub-xxx/rewarded',
-      AppAdPlacements.appOpen: 'ca-app-pub-xxx/app_open',
+    adUnitIds: AdUnitIds.typed({
+      AppAdPlacements.homeBanner: AdUnitId.single('ca-app-pub-xxx/banner'),
+      AppAdPlacements.articleNative: AdUnitId.single('ca-app-pub-xxx/native'),
+      AppAdPlacements.levelCompleteInterstitial: AdUnitId.waterfall([
+        'ca-app-pub-xxx/interstitial_high',
+        'ca-app-pub-xxx/interstitial_mid',
+        'ca-app-pub-xxx/interstitial_backfill',
+      ]),
+      AppAdPlacements.doubleReward: AdUnitId.single(
+        'ca-app-pub-xxx/rewarded',
+      ),
+      AppAdPlacements.appOpen: AdUnitId.single('ca-app-pub-xxx/app_open'),
     }),
     bannerAdConfigs: BannerAdConfigs({
       AppAdPlacements.homeBanner: BannerAdConfig.anchoredAdaptive(),
@@ -190,6 +196,11 @@ AdsBanner(
   },
 );
 ```
+
+`AdUnitIds({...})` still accepts the simple `Map<AdPlacement, String>` form.
+Use `AdUnitIds.typed({...})` when a placement needs `AdUnitId.waterfall([...])`.
+Waterfall IDs are loaded in order. The package tries the next ID only when the
+previous ID fails to load, and reports load failure only after every ID fails.
 
 By default, `AdsBanner` clears its cached ad when the widget is disposed. Set
 `clearOnDispose: false` only when the app intentionally wants to keep the
