@@ -21,6 +21,7 @@ class BannerManager implements AdManager {
   final AdPlacement placement;
 
   AdLoadStatus _status = AdLoadStatus.idle;
+  BannerAdConfig? _cachedConfig;
 
   @override
   AdLoadStatus get status => _status;
@@ -35,13 +36,19 @@ class BannerManager implements AdManager {
       return const AdResult.failure(AdFailure.consentDenied());
     }
 
-    if (hasCachedBanner) {
+    if (hasCachedBanner && _cachedConfig == config) {
       return const AdResult.success(null);
     }
 
     _status = AdLoadStatus.loading;
     final result = await service.load(placement, bannerConfig: config);
-    _status = result.isSuccess ? AdLoadStatus.ready : AdLoadStatus.failed;
+    if (result.isSuccess) {
+      _status = AdLoadStatus.ready;
+      _cachedConfig = config;
+    } else {
+      _status = AdLoadStatus.failed;
+      _cachedConfig = null;
+    }
 
     return result;
   }
@@ -49,5 +56,6 @@ class BannerManager implements AdManager {
   @override
   Future<void> dispose() async {
     _status = AdLoadStatus.idle;
+    _cachedConfig = null;
   }
 }
