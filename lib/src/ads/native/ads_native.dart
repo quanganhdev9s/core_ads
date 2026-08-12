@@ -87,6 +87,9 @@ class _AdsNativeState extends State<AdsNative> {
   void didUpdateWidget(covariant AdsNative oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
+      if (oldWidget.clearOnDispose) {
+        AppAds.clear(oldWidget.placement);
+      }
       _loadFuture = _load();
     }
   }

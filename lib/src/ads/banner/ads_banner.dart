@@ -88,8 +88,12 @@ class _AdsBannerState extends State<AdsBanner> {
   @override
   void didUpdateWidget(covariant AdsBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.placement != widget.placement ||
-        oldWidget.config != widget.config) {
+    final placementChanged = oldWidget.placement != widget.placement;
+    if (placementChanged && oldWidget.clearOnDispose) {
+      AppAds.clear(oldWidget.placement);
+    }
+
+    if (placementChanged || oldWidget.config != widget.config) {
       _resolvedConfig = null;
       _scheduledLoadConfig = null;
       if (widget.config.needsResolvedWidth) {
