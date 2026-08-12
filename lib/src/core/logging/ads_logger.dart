@@ -16,7 +16,7 @@ class AdsLogger {
 
     // ignore: avoid_print
     if (kDebugMode) {
-      print('[Ads] $message');
+      print('[App Ads] $message');
     }
   }
 }

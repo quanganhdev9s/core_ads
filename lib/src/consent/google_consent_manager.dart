@@ -49,7 +49,7 @@ class GoogleConsentManager extends ConsentManager {
 
         if (canRequest) {
           _logger.log('Consent form error, but ads can still be requested');
-          return const AdResult.success(null);
+          return _requestTrackingIfNeeded(config.consent);
         }
         return AdResult.failure(
           AdFailure(
@@ -68,21 +68,27 @@ class GoogleConsentManager extends ConsentManager {
         return const AdResult.success(null);
       }
 
-      final trackingResult = await trackingTransparencyManager.requestIfNeeded(
-        config: config.consent,
-        logger: _logger,
-      );
-      if (trackingResult.isFailure) {
-        return trackingResult;
-      }
-
-      return const AdResult.success(null);
+      return _requestTrackingIfNeeded(config.consent);
     } catch (error) {
       updateCanRequestAds(false);
       return AdResult.failure(
         AdFailure.unknown('Failed to request consent', error),
       );
     }
+  }
+
+  Future<AdResult<void>> _requestTrackingIfNeeded(
+    AdsConsentConfig config,
+  ) async {
+    final trackingResult = await trackingTransparencyManager.requestIfNeeded(
+      config: config,
+      logger: _logger,
+    );
+    if (trackingResult.isFailure) {
+      return trackingResult;
+    }
+
+    return const AdResult.success(null);
   }
 
   Future<void> _requestConsentInfoUpdate(AdsConsentConfig config) {
