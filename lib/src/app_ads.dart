@@ -40,20 +40,29 @@ class AppAds {
     AdsRepository? repository,
     AdsService? service,
   }) async {
-    if (repository != null) {
-      _repository = repository;
-      return _repository!.initialize();
+    final nextRepository =
+        repository ??
+        AdsRepositoryImpl(
+          config: config,
+          service: service ?? GoogleAdsService(),
+          consentManager: service == null ? GoogleConsentManager() : null,
+        );
+    final previousRepository = _repository;
+    final result = await nextRepository.initialize();
+
+    if (result.isFailure) {
+      if (!identical(nextRepository, previousRepository)) {
+        await nextRepository.dispose();
+      }
+      return result;
     }
 
-    final resolvedService = service ?? GoogleAdsService();
+    _repository = nextRepository;
+    if (!identical(previousRepository, nextRepository)) {
+      await previousRepository?.dispose();
+    }
 
-    _repository = AdsRepositoryImpl(
-      config: config,
-      service: resolvedService,
-      consentManager: service == null ? GoogleConsentManager() : null,
-    );
-
-    return _repository!.initialize();
+    return result;
   }
 
   /// Shows an interstitial ad for [placement] if one is ready.
