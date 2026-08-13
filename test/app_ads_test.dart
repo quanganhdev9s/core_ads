@@ -71,6 +71,18 @@ void main() {
 
     expect(CoreAds.canShow(_placement), isTrue);
   });
+
+  test('updateFullscreenCooldown delegates to active repository', () async {
+    final repository = _FakeAdsRepository();
+    const cooldown = FullscreenAdCooldownConfig(
+      interstitialInterval: Duration(seconds: 1),
+    );
+
+    await CoreAds.initialize(_config(), repository: repository);
+    CoreAds.updateFullscreenCooldown(cooldown);
+
+    expect(repository.fullscreenCooldown, same(cooldown));
+  });
 }
 
 const _placement = AdPlacement(
@@ -97,6 +109,7 @@ class _FakeAdsRepository implements AdsRepository {
   int initializeCount = 0;
   int loadCount = 0;
   int disposeCount = 0;
+  FullscreenAdCooldownConfig? fullscreenCooldown;
 
   @override
   Future<AdResult<void>> initialize() async {
@@ -118,6 +131,11 @@ class _FakeAdsRepository implements AdsRepository {
 
   @override
   bool canShow(AdPlacement placement) => canShowResult;
+
+  @override
+  void updateFullscreenCooldown(FullscreenAdCooldownConfig cooldown) {
+    fullscreenCooldown = cooldown;
+  }
 
   @override
   Widget banner(AdPlacement placement) => const SizedBox.shrink();

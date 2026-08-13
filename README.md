@@ -140,6 +140,7 @@ real app IDs from AdMob.
 CoreAds.initialize(config);
 CoreAds.load(placement);
 CoreAds.canShow(placement);
+CoreAds.updateFullscreenCooldown(cooldown);
 CoreAds.banner(placement);
 CoreAds.nativeAd(placement);
 CoreAds.showInterstitial(placement);
@@ -391,6 +392,19 @@ FullscreenAdCooldownConfig(
   interstitialInterval: Duration(seconds: 7),
   appOpenInterval: Duration(seconds: 7),
   interstitialAppOpenInterval: Duration(seconds: 7),
+);
+```
+
+Update after initialization when the app needs to change the fullscreen gap at
+runtime:
+
+```dart
+CoreAds.updateFullscreenCooldown(
+  const FullscreenAdCooldownConfig(
+    interstitialInterval: Duration(seconds: 3),
+    appOpenInterval: Duration(seconds: 10),
+    interstitialAppOpenInterval: Duration(seconds: 10),
+  ),
 );
 ```
 

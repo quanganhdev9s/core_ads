@@ -1,6 +1,5 @@
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_load_status.dart';
-import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
@@ -16,7 +15,6 @@ class AppOpenManager implements AdManager {
     required this.consentManager,
     required this.placement,
     required this.fullscreenAdController,
-    required this.fullscreenCooldown,
     required this.preloadAfterShow,
     this.expiration = const Duration(minutes: 60),
     DateTime Function()? now,
@@ -26,7 +24,6 @@ class AppOpenManager implements AdManager {
   final ConsentManager consentManager;
   final AdPlacement placement;
   final FullscreenAdController fullscreenAdController;
-  final FullscreenAdCooldownConfig fullscreenCooldown;
   final bool preloadAfterShow;
   final Duration expiration;
   final DateTime Function() _now;
@@ -48,9 +45,7 @@ class AppOpenManager implements AdManager {
       return false;
     }
 
-    return fullscreenAdController
-        .canShow(placement, fullscreenCooldown)
-        .isSuccess;
+    return fullscreenAdController.canShow(placement).isSuccess;
   }
 
   /// Whether the cached app open ad has expired.
@@ -128,10 +123,7 @@ class AppOpenManager implements AdManager {
       );
     }
 
-    final cooldownResult = fullscreenAdController.canShow(
-      placement,
-      fullscreenCooldown,
-    );
+    final cooldownResult = fullscreenAdController.canShow(placement);
     if (cooldownResult.isFailure) {
       return cooldownResult;
     }

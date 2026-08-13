@@ -167,6 +167,9 @@ class _FakeAdsRepository implements AdsRepository {
   bool canShow(AdPlacement placement) => false;
 
   @override
+  void updateFullscreenCooldown(FullscreenAdCooldownConfig cooldown) {}
+
+  @override
   Widget banner(AdPlacement placement) => const SizedBox.shrink();
 
   @override

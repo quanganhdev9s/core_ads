@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_load_status.dart';
 import '../../core/enums/ad_type.dart';
+import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import '../../core/results/ad_result.dart';
 import '../../ads/banner/banner_ad_config.dart';
 
@@ -22,6 +23,9 @@ abstract interface class AdsRepository {
 
   /// Returns whether [placement] currently has a showable fullscreen ad.
   bool canShow(AdPlacement placement);
+
+  /// Updates fullscreen ad cooldown rules used by future show checks.
+  void updateFullscreenCooldown(FullscreenAdCooldownConfig cooldown);
 
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);

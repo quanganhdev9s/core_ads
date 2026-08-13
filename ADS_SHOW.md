@@ -67,6 +67,20 @@ Theo ad type:
 - app open: `ready`, chua expired, khong dang show, khong co fullscreen ad khac
   dang show, va cooldown hop le.
 
+Neu can doi fullscreen gap sau khi da init:
+
+```dart
+CoreAds.updateFullscreenCooldown(
+  const FullscreenAdCooldownConfig(
+    interstitialInterval: Duration(seconds: 3),
+    appOpenInterval: Duration(seconds: 10),
+    interstitialAppOpenInterval: Duration(seconds: 10),
+  ),
+);
+```
+
+Gia tri moi duoc dung cho cac lan `canShow` va `show...()` tiep theo.
+
 ## Ket Qua Show
 
 `show...()` tra `Future<AdResult<void>>`.
@@ -227,6 +241,18 @@ FullscreenAdCooldownConfig(
   interstitialInterval: Duration(seconds: 7),
   appOpenInterval: Duration(seconds: 7),
   interstitialAppOpenInterval: Duration(seconds: 7),
+);
+```
+
+Runtime update:
+
+```dart
+CoreAds.updateFullscreenCooldown(
+  const FullscreenAdCooldownConfig(
+    interstitialInterval: Duration(seconds: 3),
+    appOpenInterval: Duration(seconds: 10),
+    interstitialAppOpenInterval: Duration(seconds: 10),
+  ),
 );
 ```
 

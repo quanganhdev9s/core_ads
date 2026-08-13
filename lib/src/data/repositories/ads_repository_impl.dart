@@ -5,6 +5,7 @@ import '../../core/config/ads_config.dart';
 import '../../core/enums/ad_type.dart';
 import '../../core/events/ads_failure_event.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
+import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import '../../core/load/ads_load_notifier.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
@@ -30,7 +31,10 @@ class AdsRepositoryImpl implements AdsRepository {
     FullscreenAdController? fullscreenAdController,
   }) : consentManager = consentManager ?? ConsentManager(),
        fullscreenAdController =
-           fullscreenAdController ?? FullscreenAdController();
+           fullscreenAdController ??
+           FullscreenAdController(cooldown: config.fullscreenCooldown) {
+    this.fullscreenAdController.updateCooldown(config.fullscreenCooldown);
+  }
 
   /// Runtime ads configuration.
   final AdsConfig config;
@@ -131,6 +135,11 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.native => false,
       AdType.appOpen => _appOpenManagers[placement]?.canShow ?? false,
     };
+  }
+
+  @override
+  void updateFullscreenCooldown(FullscreenAdCooldownConfig cooldown) {
+    fullscreenAdController.updateCooldown(cooldown);
   }
 
   @override
@@ -265,7 +274,6 @@ class AdsRepositoryImpl implements AdsRepository {
         consentManager: consentManager,
         placement: placement,
         fullscreenAdController: fullscreenAdController,
-        fullscreenCooldown: config.fullscreenCooldown,
         preloadAfterShow: placement.preloadAfterShow,
       ),
     );
@@ -307,7 +315,6 @@ class AdsRepositoryImpl implements AdsRepository {
         consentManager: consentManager,
         placement: placement,
         fullscreenAdController: fullscreenAdController,
-        fullscreenCooldown: config.fullscreenCooldown,
         preloadAfterShow: placement.preloadAfterShow,
       ),
     );

@@ -7,10 +7,15 @@ import 'fullscreen_ad_cooldown_config.dart';
 /// Coordinates fullscreen ads so only one can be shown at a time.
 class FullscreenAdController {
   /// Creates a fullscreen ad controller.
-  FullscreenAdController({DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  FullscreenAdController({
+    this.cooldown = const FullscreenAdCooldownConfig(),
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
 
   final DateTime Function() _now;
+
+  /// Current fullscreen cooldown rules.
+  FullscreenAdCooldownConfig cooldown;
 
   AdPlacement? _activePlacement;
   DateTime? _lastInterstitialShownAt;
@@ -22,14 +27,16 @@ class FullscreenAdController {
   /// Whether a fullscreen ad is currently showing.
   bool get isShowing => _activePlacement != null;
 
+  /// Updates cooldown rules used by future can-show checks.
+  void updateCooldown(FullscreenAdCooldownConfig cooldown) {
+    this.cooldown = cooldown;
+  }
+
   /// Checks whether [placement] can show according to cooldown rules.
-  AdResult<void> canShow(
-    AdPlacement placement,
-    FullscreenAdCooldownConfig cooldown,
-  ) {
+  AdResult<void> canShow(AdPlacement placement) {
     return switch (placement.type) {
-      AdType.interstitial => _canShowInterstitial(cooldown),
-      AdType.appOpen => _canShowAppOpen(cooldown),
+      AdType.interstitial => _canShowInterstitial(),
+      AdType.appOpen => _canShowAppOpen(),
       _ => const AdResult.success(null),
     };
   }
@@ -79,7 +86,7 @@ class FullscreenAdController {
     _lastAppOpenShownAt = null;
   }
 
-  AdResult<void> _canShowInterstitial(FullscreenAdCooldownConfig cooldown) {
+  AdResult<void> _canShowInterstitial() {
     final interstitialResult = _checkCooldown(
       lastShownAt: _lastInterstitialShownAt,
       interval: cooldown.interstitialInterval,
@@ -98,7 +105,7 @@ class FullscreenAdController {
     );
   }
 
-  AdResult<void> _canShowAppOpen(FullscreenAdCooldownConfig cooldown) {
+  AdResult<void> _canShowAppOpen() {
     final appOpenResult = _checkCooldown(
       lastShownAt: _lastAppOpenShownAt,
       interval: cooldown.appOpenInterval,

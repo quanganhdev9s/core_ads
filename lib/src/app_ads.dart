@@ -4,6 +4,7 @@ import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
 import 'core/enums/ad_load_status.dart';
 import 'core/enums/ad_type.dart';
+import 'core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import 'core/load/ads_load_notifier.dart';
 import 'core/reload/ads_reload_notifier.dart';
 import 'core/results/ad_failure.dart';
@@ -163,6 +164,11 @@ class CoreAds {
   /// Returns whether [placement] currently has a showable fullscreen ad.
   static bool canShow(AdPlacement placement) {
     return _repository?.canShow(placement) ?? false;
+  }
+
+  /// Updates fullscreen ad cooldown rules after initialization.
+  static void updateFullscreenCooldown(FullscreenAdCooldownConfig cooldown) {
+    _repository?.updateFullscreenCooldown(cooldown);
   }
 
   /// Builds a banner widget for [placement].

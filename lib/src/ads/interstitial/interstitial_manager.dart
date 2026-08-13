@@ -1,6 +1,5 @@
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_load_status.dart';
-import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/results/ad_failure.dart';
 import '../../core/results/ad_result.dart';
@@ -16,7 +15,6 @@ class InterstitialManager implements AdManager {
     required this.consentManager,
     required this.placement,
     required this.fullscreenAdController,
-    required this.fullscreenCooldown,
     required this.preloadAfterShow,
   });
 
@@ -24,7 +22,6 @@ class InterstitialManager implements AdManager {
   final ConsentManager consentManager;
   final AdPlacement placement;
   final FullscreenAdController fullscreenAdController;
-  final FullscreenAdCooldownConfig fullscreenCooldown;
   final bool preloadAfterShow;
 
   AdLoadStatus _status = AdLoadStatus.idle;
@@ -39,9 +36,7 @@ class InterstitialManager implements AdManager {
       return false;
     }
 
-    return fullscreenAdController
-        .canShow(placement, fullscreenCooldown)
-        .isSuccess;
+    return fullscreenAdController.canShow(placement).isSuccess;
   }
 
   @override
@@ -86,10 +81,7 @@ class InterstitialManager implements AdManager {
       return const AdResult.failure(AdFailure.notReady());
     }
 
-    final cooldownResult = fullscreenAdController.canShow(
-      placement,
-      fullscreenCooldown,
-    );
+    final cooldownResult = fullscreenAdController.canShow(placement);
     if (cooldownResult.isFailure) {
       return cooldownResult;
     }
