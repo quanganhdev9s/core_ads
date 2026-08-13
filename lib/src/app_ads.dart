@@ -21,12 +21,14 @@ class AppAds {
 
   static AdsRepository? _repository;
 
-  /// Adds a listener for placement load state changes.
+  /// Adds a listener for placement load operation progress.
+  ///
+  /// Use [getStatus] when the app needs the current placement cache status.
   static void addLoadListener(AdsLoadListener listener) {
     AdsLoadNotifier.instance.addListener(listener);
   }
 
-  /// Removes a listener for placement load state changes.
+  /// Removes a listener for placement load operation progress.
   static void removeLoadListener(AdsLoadListener listener) {
     AdsLoadNotifier.instance.removeListener(listener);
   }
@@ -154,8 +156,8 @@ class AppAds {
   }
 
   /// Returns current load/cache status for [placement].
-  static AdLoadStatus loadStatusOf(AdPlacement placement) {
-    return _repository?.loadStatusOf(placement) ?? AdLoadStatus.idle;
+  static AdLoadStatus getStatus(AdPlacement placement) {
+    return _repository?.getStatus(placement) ?? AdLoadStatus.idle;
   }
 
   /// Builds a banner widget for [placement].

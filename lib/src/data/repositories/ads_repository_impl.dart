@@ -105,7 +105,7 @@ class AdsRepositoryImpl implements AdsRepository {
   }
 
   @override
-  AdLoadStatus loadStatusOf(AdPlacement placement) {
+  AdLoadStatus getStatus(AdPlacement placement) {
     return switch (placement.type) {
       AdType.banner => _bannerManagers[placement]?.status ?? AdLoadStatus.idle,
       AdType.interstitial =>

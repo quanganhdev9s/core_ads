@@ -18,7 +18,7 @@ abstract interface class AdsRepository {
   });
 
   /// Returns current load/cache status for [placement].
-  AdLoadStatus loadStatusOf(AdPlacement placement);
+  AdLoadStatus getStatus(AdPlacement placement);
 
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);

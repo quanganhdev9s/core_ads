@@ -6,10 +6,14 @@ import '../enums/ad_load_status.dart';
 import '../events/ads_load_event.dart';
 import '../results/ad_failure.dart';
 
-/// Listener for placement load state changes.
+/// Listener for load operation progress emitted by [AppAds.load].
+///
+/// This listener is not the source of truth for a placement's current cache
+/// state. Use `AppAds.getStatus(placement)` when the app needs the current
+/// status after show, clear, or internal preload flows.
 typedef AdsLoadListener = void Function(AdsLoadEvent event);
 
-/// Notifies app UI about ad load state changes.
+/// Notifies app UI about load operation progress.
 class AdsLoadNotifier {
   AdsLoadNotifier._();
 
@@ -34,7 +38,7 @@ class AdsLoadNotifier {
     _listeners.remove(listener);
   }
 
-  /// Notifies listeners about a placement load state change.
+  /// Notifies listeners about one step in a placement load operation.
   void notify(
     AdPlacement placement,
     AdLoadStatus status, {

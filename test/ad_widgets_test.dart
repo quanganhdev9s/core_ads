@@ -145,7 +145,7 @@ class _FakeAdsRepository implements AdsRepository {
   }
 
   @override
-  AdLoadStatus loadStatusOf(AdPlacement placement) => AdLoadStatus.ready;
+  AdLoadStatus getStatus(AdPlacement placement) => AdLoadStatus.ready;
 
   @override
   Widget banner(AdPlacement placement) => const SizedBox.shrink();

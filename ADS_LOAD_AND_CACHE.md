@@ -6,8 +6,8 @@ package.
 Khi thay đổi bất kỳ logic nào liên quan đến các phần sau, phải cập nhật file
 này trong cùng thay đổi:
 
-- `AppAds.load`, `AppAds.loadStatusOf`
-- `AdsRepository.load`, `AdsRepository.loadStatusOf`
+- `AppAds.load`, `AppAds.getStatus`
+- `AdsRepository.load`, `AdsRepository.getStatus`
 - các manager trong `lib/src/ads/**`
 - `GoogleAdsService.load`, `_loadWaterfall`, `clear`, `clearType`
 - `AdPlacement.preloadAfterShow`
@@ -68,7 +68,7 @@ Luồng hiện tại:
    - `AdLoadStatus.failed` nếu result failure.
 9. Repository trả `AdResult` cho caller.
 
-`AppAds.loadStatusOf(placement)` đọc status từ manager hiện có. Nếu manager chưa
+`AppAds.getStatus(placement)` đọc status từ manager hiện có. Nếu manager chưa
 tồn tại, trả `AdLoadStatus.idle` và không tạo manager mới.
 
 ## Điều Kiện Được Load
@@ -333,7 +333,12 @@ service clear theo type.
 
 ## Load Listener
 
-`AppAds.addLoadListener` cho UI listen load state:
+`AppAds.addLoadListener` cho UI listen tiến trình/kết quả của load operation
+được phát ra khi app gọi `AppAds.load(...)`.
+
+Listener này không phải source of truth cho trạng thái cache hiện tại của
+placement. Nếu UI cần biết trạng thái hiện tại sau các flow như show, clear,
+hoặc preload nội bộ sau fullscreen show, hãy đọc `AppAds.getStatus(placement)`.
 
 ```dart
 AppAds.addLoadListener((event) {

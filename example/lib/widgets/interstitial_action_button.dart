@@ -25,14 +25,14 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
   void initState() {
     super.initState();
     AppAds.addLoadListener(_handleAdLoad);
-    _state = _stateFromStatus(AppAds.loadStatusOf(widget.placement));
+    _state = _stateFromStatus(AppAds.getStatus(widget.placement));
   }
 
   @override
   void didUpdateWidget(covariant InterstitialActionButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
-      _state = _stateFromStatus(AppAds.loadStatusOf(widget.placement));
+      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
     }
   }
 
@@ -87,7 +87,7 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
     }
 
     setState(() {
-      _state = _stateFromStatus(AppAds.loadStatusOf(widget.placement));
+      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
     });
   }
 
@@ -102,7 +102,7 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
     }
 
     setState(() {
-      _state = _stateFromStatus(AppAds.loadStatusOf(widget.placement));
+      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
     });
   }
 
