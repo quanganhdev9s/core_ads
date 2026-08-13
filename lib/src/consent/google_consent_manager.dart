@@ -27,10 +27,13 @@ class GoogleConsentManager extends ConsentManager {
   @override
   Future<AdResult<void>> requestConsent(AdsConfig config) async {
     _logger = AdsLogger(enabled: config.enableDebugLogs);
+    _logger.log('Consent request started');
 
     if (!config.consent.enabled) {
       updateCanRequestAds(true);
-      _logger.log('Consent flow disabled');
+      _logger.log(
+        'Consent request completed: flow disabled, canRequestAds=true',
+      );
       return const AdResult.success(null);
     }
 
@@ -49,15 +52,19 @@ class GoogleConsentManager extends ConsentManager {
 
         if (canRequest) {
           _logger.log('Consent form error, but ads can still be requested');
-          return _requestTrackingIfNeeded(config.consent);
+          final trackingResult = await _requestTrackingIfNeeded(config.consent);
+          _logConsentResult(trackingResult, canRequestAds: canRequest);
+          return trackingResult;
         }
-        return AdResult.failure(
+        final result = AdResult<void>.failure(
           AdFailure(
             code: 'consent_form_error',
             message: formError.message,
             cause: formError,
           ),
         );
+        _logConsentResult(result, canRequestAds: canRequest);
+        return result;
       }
 
       final canRequest = await ConsentInformation.instance.canRequestAds();
@@ -65,15 +72,31 @@ class GoogleConsentManager extends ConsentManager {
       _logger.log('Consent canRequestAds=$canRequest');
 
       if (!canRequest) {
+        _logger.log('Consent request completed: canRequestAds=false');
         return const AdResult.success(null);
       }
 
-      return _requestTrackingIfNeeded(config.consent);
+      final trackingResult = await _requestTrackingIfNeeded(config.consent);
+      _logConsentResult(trackingResult, canRequestAds: canRequest);
+      return trackingResult;
     } catch (error) {
       updateCanRequestAds(false);
-      return AdResult.failure(
+      final result = AdResult<void>.failure(
         AdFailure.unknown('Failed to request consent', error),
       );
+      _logConsentResult(result, canRequestAds: false);
+      return result;
+    }
+  }
+
+  void _logConsentResult(AdResult<void> result, {required bool canRequestAds}) {
+    switch (result) {
+      case AdSuccess<void>():
+        _logger.log('Consent request completed: canRequestAds=$canRequestAds');
+      case AdFailed<void>(failure: final failure):
+        _logger.log(
+          'Consent request failed: ${failure.code}, canRequestAds=$canRequestAds',
+        );
     }
   }
 

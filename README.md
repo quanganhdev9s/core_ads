@@ -468,7 +468,11 @@ AdsConfig(
 );
 ```
 
-Use `onPaid` for ad revenue analytics. Grant rewards inside the
+Use `onPaid` for ad revenue analytics such as Adjust. `AdsPaidEvent` includes
+`revenue` (converted from micros), `valueMicros`, `currencyCode`, `precision`,
+`adUnitId`, `placement`, `type`, `network`, and available mediation metadata:
+`responseId`, `mediationAdapterClassName`, `adSourceName`, `adSourceId`,
+`adSourceInstanceName`, `adSourceInstanceId`. Grant rewards inside the
 `showRewarded` or `showRewardedInterstitial` `onRewardEarned` callback.
 
 Banner ads can refresh automatically by the SDK, so banner `onLoaded` can be

@@ -374,8 +374,8 @@ class GoogleAdsService implements AdsService {
         },
         onAdImpression: (_) => _emitImpression(placement),
         onAdClicked: (_) => _emitClicked(placement),
-        onPaidEvent: (_, valueMicros, precision, currencyCode) =>
-            _emitPaid(placement, valueMicros, precision, currencyCode),
+        onPaidEvent: (ad, valueMicros, precision, currencyCode) =>
+            _emitPaid(placement, ad, valueMicros, precision, currencyCode),
       ),
     );
 
@@ -459,8 +459,8 @@ class GoogleAdsService implements AdsService {
         },
         onAdImpression: (_) => _emitImpression(placement),
         onAdClicked: (_) => _emitClicked(placement),
-        onPaidEvent: (_, valueMicros, precision, currencyCode) =>
-            _emitPaid(placement, valueMicros, precision, currencyCode),
+        onPaidEvent: (ad, valueMicros, precision, currencyCode) =>
+            _emitPaid(placement, ad, valueMicros, precision, currencyCode),
       ),
     );
 
@@ -501,6 +501,8 @@ class GoogleAdsService implements AdsService {
         request: _request,
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (ad) {
+            ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) =>
+                _emitPaid(placement, ad, valueMicros, precision, currencyCode);
             _interstitialAds[placement] = ad;
             _logger.log('${placement.key} interstitial loaded');
             _emitLoaded(placement);
@@ -548,6 +550,8 @@ class GoogleAdsService implements AdsService {
         request: _request,
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (ad) {
+            ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) =>
+                _emitPaid(placement, ad, valueMicros, precision, currencyCode);
             _rewardedAds[placement] = ad;
             _logger.log('${placement.key} rewarded loaded');
             _emitLoaded(placement);
@@ -595,6 +599,8 @@ class GoogleAdsService implements AdsService {
         request: _request,
         rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
           onAdLoaded: (ad) {
+            ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) =>
+                _emitPaid(placement, ad, valueMicros, precision, currencyCode);
             _rewardedInterstitialAds[placement] = ad;
             _logger.log('${placement.key} rewarded interstitial loaded');
             _emitLoaded(placement);
@@ -642,6 +648,8 @@ class GoogleAdsService implements AdsService {
         request: _request,
         adLoadCallback: AppOpenAdLoadCallback(
           onAdLoaded: (ad) {
+            ad.onPaidEvent = (ad, valueMicros, precision, currencyCode) =>
+                _emitPaid(placement, ad, valueMicros, precision, currencyCode);
             _appOpenAds[placement] = ad;
             _logger.log('${placement.key} app open loaded');
             _emitLoaded(placement);
@@ -781,18 +789,24 @@ class GoogleAdsService implements AdsService {
 
     for (var index = 0; index < adUnitIds.length; index++) {
       final adUnitId = adUnitIds[index];
+      _logger.log(
+        '${placement.key} waterfall index=$index '
+        'START LOAD adUnitId=$adUnitId',
+      );
       final result = await load(adUnitId);
       if (result.isSuccess) {
-        if (index > 0) {
-          _logger.log('${placement.key} loaded from waterfall index=$index');
-        }
+        _logger.log(
+          '${placement.key} waterfall index=$index '
+          'LOADED adUnitId=$adUnitId',
+        );
         return result;
       }
 
       final failure = (result as AdFailed<void>).failure;
       lastFailure = failure;
       _logger.log(
-        '${placement.key} waterfall index=$index failed: ${failure.code}',
+        '${placement.key} waterfall index=$index '
+        'FAILED adUnitId=$adUnitId code=${failure.code}',
       );
     }
 
@@ -883,17 +897,27 @@ class GoogleAdsService implements AdsService {
 
   void _emitPaid(
     AdPlacement placement,
+    Ad ad,
     double valueMicros,
     PrecisionType precision,
     String currencyCode,
   ) {
+    final responseInfo = ad.responseInfo;
+    final loadedAdapter = responseInfo?.loadedAdapterResponseInfo;
     _config?.callbacks.onPaid?.call(
       AdsPaidEvent(
         placement: placement,
         network: AdNetwork.google,
+        adUnitId: ad.adUnitId,
         valueMicros: valueMicros,
         currencyCode: currencyCode,
         precision: precision.name,
+        responseId: responseInfo?.responseId,
+        mediationAdapterClassName: responseInfo?.mediationAdapterClassName,
+        adSourceName: loadedAdapter?.adSourceName,
+        adSourceId: loadedAdapter?.adSourceId,
+        adSourceInstanceName: loadedAdapter?.adSourceInstanceName,
+        adSourceInstanceId: loadedAdapter?.adSourceInstanceId,
       ),
     );
   }

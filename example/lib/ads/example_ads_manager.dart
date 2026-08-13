@@ -186,9 +186,7 @@ class ExampleAdsManager extends ChangeNotifier {
       consent: const AdsConsentConfig(
         enabled: true,
         requestTrackingAuthorizationOnIos: true,
-        testDeviceIds: [
-          'B3EEABB8EE11C2BE770B684D95219ECB',
-        ]
+        testDeviceIds: ['B3EEABB8EE11C2BE770B684D95219ECB'],
       ),
       callbacks: _wrapCallbacks(callbacks),
       enableDebugLogs: true,
@@ -212,9 +210,7 @@ class ExampleAdsManager extends ChangeNotifier {
   }
 
   void _trackAdjustAdRevenue(AdsPaidEvent event) {
-    debugPrint(
-      'Forward to Adjust: ${event.placement.key} '
-      '${event.valueMicros} ${event.currencyCode}',
-    );
+    // Forward event.revenue, event.currencyCode, event.adUnitId,
+    // event.placement.key, and mediation fields to the app's Adjust SDK.
   }
 }
