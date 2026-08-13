@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core_ads/core_ads.dart';
 import 'package:core_ads/src/ads/banner/banner_manager.dart';
 import 'package:core_ads/src/consent/consent_manager.dart';
@@ -39,9 +41,59 @@ void main() {
     expect(service.loadedConfigs, [firstConfig, secondConfig]);
     expect(manager.status, AdLoadStatus.ready);
   });
+
+  test('shares in-flight banner load when config is unchanged', () async {
+    final loadCompleter = Completer<AdResult<void>>();
+    final service = _FakeAdsService(loadCompleter: loadCompleter);
+    final manager = BannerManager(
+      service: service,
+      consentManager: ConsentManager(),
+      placement: placement,
+    );
+    const config = BannerAdConfig.banner();
+
+    final firstLoad = manager.load(config: config);
+    final secondLoad = manager.load(config: config);
+
+    expect(service.loadedConfigs, [config]);
+
+    loadCompleter.complete(const AdResult.success(null));
+
+    expect((await firstLoad).isSuccess, isTrue);
+    expect((await secondLoad).isSuccess, isTrue);
+    expect(service.loadedConfigs, [config]);
+    expect(manager.status, AdLoadStatus.ready);
+  });
+
+  test('queues in-flight banner load when config changes', () async {
+    final firstLoadCompleter = Completer<AdResult<void>>();
+    final service = _FakeAdsService(loadCompleter: firstLoadCompleter);
+    final manager = BannerManager(
+      service: service,
+      consentManager: ConsentManager(),
+      placement: placement,
+    );
+    const firstConfig = BannerAdConfig.anchoredAdaptive(width: 320);
+    const secondConfig = BannerAdConfig.anchoredAdaptive(width: 480);
+
+    final firstLoad = manager.load(config: firstConfig);
+    final secondLoad = manager.load(config: secondConfig);
+
+    expect(service.loadedConfigs, [firstConfig]);
+
+    firstLoadCompleter.complete(const AdResult.success(null));
+
+    expect((await firstLoad).isSuccess, isTrue);
+    expect((await secondLoad).isSuccess, isTrue);
+    expect(service.loadedConfigs, [firstConfig, secondConfig]);
+    expect(manager.status, AdLoadStatus.ready);
+  });
 }
 
 class _FakeAdsService implements AdsService {
+  _FakeAdsService({this.loadCompleter});
+
+  final Completer<AdResult<void>>? loadCompleter;
   final List<BannerAdConfig?> loadedConfigs = [];
 
   @override
@@ -55,7 +107,7 @@ class _FakeAdsService implements AdsService {
     BannerAdConfig? bannerConfig,
   }) async {
     loadedConfigs.add(bannerConfig);
-    return const AdResult.success(null);
+    return loadCompleter?.future ?? const AdResult.success(null);
   }
 
   @override

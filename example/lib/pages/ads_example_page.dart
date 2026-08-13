@@ -168,22 +168,22 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     }
   }
 
-  Future<void> _showInterstitial() async {
-    await _initialize();
-    _setAdState(ExamplePlacements.interstitial, 'showing');
-    final result = await _adsManager.showInterstitial(
-      ExamplePlacements.interstitial,
-    );
-    if (result.isFailure) {
-      _setAdState(
-        ExamplePlacements.interstitial,
-        'skipped: ${_failureCode(result)}',
-      );
-    }
-    _setStatus(
-      result.isSuccess ? 'Interstitial finished' : 'Interstitial skipped',
-    );
-  }
+  // Future<void> _showInterstitial() async {
+  //   await _initialize();
+  //   _setAdState(ExamplePlacements.interstitial, 'showing');
+  //   final result = await _adsManager.showInterstitial(
+  //     ExamplePlacements.interstitial,
+  //   );
+  //   if (result.isFailure) {
+  //     _setAdState(
+  //       ExamplePlacements.interstitial,
+  //       'skipped: ${_failureCode(result)}',
+  //     );
+  //   }
+  //   _setStatus(
+  //     result.isSuccess ? 'Interstitial finished' : 'Interstitial skipped',
+  //   );
+  // }
 
   Future<void> _showRewarded() async {
     await _initialize();

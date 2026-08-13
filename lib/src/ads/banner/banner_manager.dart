@@ -22,6 +22,9 @@ class BannerManager implements AdManager {
 
   AdLoadStatus _status = AdLoadStatus.idle;
   BannerAdConfig? _cachedConfig;
+  BannerAdConfig? _loadingConfig;
+  Future<AdResult<void>>? _loadFuture;
+  int _loadToken = 0;
 
   @override
   AdLoadStatus get status => _status;
@@ -40,8 +43,41 @@ class BannerManager implements AdManager {
       return const AdResult.success(null);
     }
 
+    final existingLoad = _loadFuture;
+    if (existingLoad != null) {
+      if (_loadingConfig == config) {
+        return existingLoad;
+      }
+
+      await existingLoad;
+      return load(config: config);
+    }
+
+    final token = ++_loadToken;
+    final loadFuture = _load(config: config, token: token);
+    _loadFuture = loadFuture;
+    _loadingConfig = config;
+
+    try {
+      return await loadFuture;
+    } finally {
+      if (identical(_loadFuture, loadFuture)) {
+        _loadFuture = null;
+        _loadingConfig = null;
+      }
+    }
+  }
+
+  Future<AdResult<void>> _load({
+    required BannerAdConfig? config,
+    required int token,
+  }) async {
     _status = AdLoadStatus.loading;
     final result = await service.load(placement, bannerConfig: config);
+    if (token != _loadToken) {
+      return result;
+    }
+
     if (result.isSuccess) {
       _status = AdLoadStatus.ready;
       _cachedConfig = config;
@@ -55,6 +91,9 @@ class BannerManager implements AdManager {
 
   @override
   Future<void> dispose() async {
+    _loadFuture = null;
+    _loadingConfig = null;
+    _loadToken++;
     _status = AdLoadStatus.idle;
     _cachedConfig = null;
   }

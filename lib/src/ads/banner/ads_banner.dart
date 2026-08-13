@@ -22,7 +22,7 @@ class AdsBanner extends StatefulWidget {
     this.showRetryButton = false,
     this.onLoaded,
     this.onFailed,
-    this.clearOnDispose = true,
+    this.clearOnDispose = false,
   });
 
   /// Banner placement to render.

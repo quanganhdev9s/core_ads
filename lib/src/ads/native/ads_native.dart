@@ -22,7 +22,7 @@ class AdsNative extends StatefulWidget {
     this.showRetryButton = false,
     this.onLoaded,
     this.onFailed,
-    this.clearOnDispose = true,
+    this.clearOnDispose = false,
   });
 
   /// Native ad placement to render.

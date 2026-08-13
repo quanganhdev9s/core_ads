@@ -22,7 +22,11 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AdsBanner(key: ValueKey('ad'), placement: _bannerA),
+        child: AdsBanner(
+          key: ValueKey('ad'),
+          placement: _bannerA,
+          clearOnDispose: true,
+        ),
       ),
     );
     await tester.pump();
@@ -30,7 +34,11 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AdsBanner(key: ValueKey('ad'), placement: _bannerB),
+        child: AdsBanner(
+          key: ValueKey('ad'),
+          placement: _bannerB,
+          clearOnDispose: true,
+        ),
       ),
     );
     await tester.pump();
@@ -52,7 +60,11 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AdsNative(key: ValueKey('ad'), placement: _nativeA),
+        child: AdsNative(
+          key: ValueKey('ad'),
+          placement: _nativeA,
+          clearOnDispose: true,
+        ),
       ),
     );
     await tester.pump();
@@ -60,7 +72,11 @@ void main() {
     await tester.pumpWidget(
       const Directionality(
         textDirection: TextDirection.ltr,
-        child: AdsNative(key: ValueKey('ad'), placement: _nativeB),
+        child: AdsNative(
+          key: ValueKey('ad'),
+          placement: _nativeB,
+          clearOnDispose: true,
+        ),
       ),
     );
     await tester.pump();
@@ -185,8 +201,9 @@ class _FakeAdsRepository implements AdsRepository {
   }
 
   @override
-  Future<void> clear(AdPlacement placement) async {
+  Future<void> clear(AdPlacement placement) {
     clearedPlacements.add(placement);
+    return Future.value();
   }
 
   @override
