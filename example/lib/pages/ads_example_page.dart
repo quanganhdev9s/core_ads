@@ -34,13 +34,13 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
     _lifecycleObserver = AdsAppLifecycleObserver(
       appOpenPlacement: ExamplePlacements.appOpen,
     )..attach();
-    AppAds.addLoadListener(_handleAdLoad);
+    CoreAds.addLoadListener(_handleAdLoad);
     _initialize();
   }
 
   @override
   void dispose() {
-    AppAds.removeLoadListener(_handleAdLoad);
+    CoreAds.removeLoadListener(_handleAdLoad);
     _lifecycleObserver.detach();
     _adsManager.disposeAds();
     _adsManager.dispose();

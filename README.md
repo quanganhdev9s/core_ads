@@ -49,7 +49,7 @@ is used in the app.
 2. Initialize ads:
 
 ```dart
-await AppAds.initialize(
+await CoreAds.initialize(
   AdsConfig(
     environment: AdsEnvironment.production,
     adUnitIds: AdUnitIds.typed({
@@ -97,14 +97,14 @@ const AdsNative(
   loading: AdsLoadingWidget(height: 140),
 );
 
-await AppAds.load(AppAdPlacements.levelCompleteInterstitial);
-await AppAds.showInterstitial(AppAdPlacements.levelCompleteInterstitial);
+await CoreAds.load(AppAdPlacements.levelCompleteInterstitial);
+await CoreAds.showInterstitial(AppAdPlacements.levelCompleteInterstitial);
 ```
 
 Always inspect returned results when the action controls app flow:
 
 ```dart
-final result = await AppAds.initialize(config);
+final result = await CoreAds.initialize(config);
 if (result case AdFailed(:final failure)) {
   debugPrint('Ads init failed: ${failure.code}');
 }
@@ -137,18 +137,18 @@ real app IDs from AdMob.
 ## Public API
 
 ```dart
-AppAds.initialize(config);
-AppAds.load(placement);
-AppAds.banner(placement);
-AppAds.nativeAd(placement);
-AppAds.showInterstitial(placement);
-AppAds.showRewarded(placement: placement, onRewardEarned: () {});
-AppAds.showRewardedInterstitial(placement: placement, onRewardEarned: () {});
-AppAds.showAppOpen(placement);
-AppAds.handleAppResume(placement);
-AppAds.clear(placement);
-AppAds.clearType(type);
-AppAds.dispose();
+CoreAds.initialize(config);
+CoreAds.load(placement);
+CoreAds.banner(placement);
+CoreAds.nativeAd(placement);
+CoreAds.showInterstitial(placement);
+CoreAds.showRewarded(placement: placement, onRewardEarned: () {});
+CoreAds.showRewardedInterstitial(placement: placement, onRewardEarned: () {});
+CoreAds.showAppOpen(placement);
+CoreAds.handleAppResume(placement);
+CoreAds.clear(placement);
+CoreAds.clearType(type);
+CoreAds.dispose();
 ```
 
 ## Banner
@@ -333,25 +333,25 @@ route pop in the parent widget and set `isNativeExpanded = true`.
 Preload before showing:
 
 ```dart
-await AppAds.load(AppAdPlacements.levelCompleteInterstitial);
-await AppAds.load(AppAdPlacements.doubleReward);
+await CoreAds.load(AppAdPlacements.levelCompleteInterstitial);
+await CoreAds.load(AppAdPlacements.doubleReward);
 ```
 
 Show fullscreen ads:
 
 ```dart
-await AppAds.showInterstitial(
+await CoreAds.showInterstitial(
   AppAdPlacements.levelCompleteInterstitial,
 );
 
-await AppAds.showRewarded(
+await CoreAds.showRewarded(
   placement: AppAdPlacements.doubleReward,
   onRewardEarned: () {
     // Grant reward here.
   },
 );
 
-await AppAds.showRewardedInterstitial(
+await CoreAds.showRewardedInterstitial(
   placement: AppAdPlacements.levelBonusRewardedInterstitial,
   onRewardEarned: () {
     // Grant bonus reward here.
@@ -395,8 +395,8 @@ FullscreenAdCooldownConfig(
 Manual flow:
 
 ```dart
-await AppAds.load(AppAdPlacements.appOpen);
-await AppAds.showAppOpen(AppAdPlacements.appOpen);
+await CoreAds.load(AppAdPlacements.appOpen);
+await CoreAds.showAppOpen(AppAdPlacements.appOpen);
 ```
 
 Lifecycle helper:
@@ -413,7 +413,7 @@ adsLifecycleObserver.detach();
 Manual resume handling:
 
 ```dart
-await AppAds.handleAppResume(AppAdPlacements.appOpen);
+await CoreAds.handleAppResume(AppAdPlacements.appOpen);
 ```
 
 ## Consent And ATT
@@ -499,22 +499,22 @@ Every operation returns `AdResult<void>`. Important failure codes:
 Clear one placement:
 
 ```dart
-await AppAds.clear(AppAdPlacements.levelCompleteInterstitial);
+await CoreAds.clear(AppAdPlacements.levelCompleteInterstitial);
 ```
 
 Clear all cached ads for a type:
 
 ```dart
-await AppAds.clearType(AdType.interstitial);
+await CoreAds.clearType(AdType.interstitial);
 ```
 
 Dispose all resources:
 
 ```dart
-await AppAds.dispose();
+await CoreAds.dispose();
 ```
 
-When `AppAds.clear(placement)` or `AppAds.clearType(type)` is called, visible
+When `CoreAds.clear(placement)` or `CoreAds.clearType(type)` is called, visible
 `AdsBanner` and `AdsNative` widgets for the cleared placement/type reload
 automatically.
 

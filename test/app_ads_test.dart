@@ -6,11 +6,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    await AppAds.dispose();
+    await CoreAds.dispose();
   });
 
   tearDown(() async {
-    await AppAds.dispose();
+    await CoreAds.dispose();
   });
 
   test('initialize failure does not publish failed repository', () async {
@@ -20,11 +20,11 @@ void main() {
       ),
     );
 
-    final initializeResult = await AppAds.initialize(
+    final initializeResult = await CoreAds.initialize(
       _config(),
       repository: failingRepository,
     );
-    final loadResult = await AppAds.load(_placement);
+    final loadResult = await CoreAds.load(_placement);
 
     expect(initializeResult.isFailure, isTrue);
     expect(failingRepository.disposeCount, 1);
@@ -44,16 +44,16 @@ void main() {
       );
       final secondRepository = _FakeAdsRepository();
 
-      await AppAds.initialize(_config(), repository: firstRepository);
-      await AppAds.initialize(_config(), repository: failingRepository);
-      final loadResult = await AppAds.load(_placement);
+      await CoreAds.initialize(_config(), repository: firstRepository);
+      await CoreAds.initialize(_config(), repository: failingRepository);
+      final loadResult = await CoreAds.load(_placement);
 
       expect(loadResult.isSuccess, isTrue);
       expect(firstRepository.loadCount, 1);
       expect(firstRepository.disposeCount, 0);
       expect(failingRepository.disposeCount, 1);
 
-      await AppAds.initialize(_config(), repository: secondRepository);
+      await CoreAds.initialize(_config(), repository: secondRepository);
 
       expect(firstRepository.disposeCount, 1);
       expect(secondRepository.disposeCount, 0);

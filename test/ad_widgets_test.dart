@@ -6,18 +6,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    await AppAds.dispose();
+    await CoreAds.dispose();
   });
 
   tearDown(() async {
-    await AppAds.dispose();
+    await CoreAds.dispose();
   });
 
   testWidgets('AdsBanner clears old placement when placement changes', (
     tester,
   ) async {
     final repository = _FakeAdsRepository();
-    await AppAds.initialize(_config(), repository: repository);
+    await CoreAds.initialize(_config(), repository: repository);
 
     await tester.pumpWidget(
       const Directionality(
@@ -47,7 +47,7 @@ void main() {
     tester,
   ) async {
     final repository = _FakeAdsRepository();
-    await AppAds.initialize(_config(), repository: repository);
+    await CoreAds.initialize(_config(), repository: repository);
 
     await tester.pumpWidget(
       const Directionality(
@@ -77,7 +77,7 @@ void main() {
     'clearOnDispose false keeps old placement when placement changes',
     (tester) async {
       final repository = _FakeAdsRepository();
-      await AppAds.initialize(_config(), repository: repository);
+      await CoreAds.initialize(_config(), repository: repository);
 
       await tester.pumpWidget(
         const Directionality(

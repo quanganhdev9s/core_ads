@@ -16,8 +16,8 @@ import 'services/google_ads_service.dart';
 import 'consent/google_consent_manager.dart';
 
 /// Public entry-point used by applications to interact with ads.
-class AppAds {
-  AppAds._();
+class CoreAds {
+  CoreAds._();
 
   static AdsRepository? _repository;
 

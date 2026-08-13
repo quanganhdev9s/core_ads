@@ -78,7 +78,7 @@ class _AdsNativeState extends State<AdsNative> {
     AdsReloadNotifier.instance.removePlacementListener(_handlePlacementReload);
     AdsReloadNotifier.instance.removeTypeListener(_handleTypeReload);
     if (widget.clearOnDispose) {
-      AppAds.clear(widget.placement);
+      CoreAds.clear(widget.placement);
     }
     super.dispose();
   }
@@ -88,7 +88,7 @@ class _AdsNativeState extends State<AdsNative> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
       if (oldWidget.clearOnDispose) {
-        AppAds.clear(oldWidget.placement);
+        CoreAds.clear(oldWidget.placement);
       }
       _loadFuture = _load();
     }
@@ -113,14 +113,14 @@ class _AdsNativeState extends State<AdsNative> {
           return _buildError(context);
         }
 
-        return AppAds.nativeAd(widget.placement);
+        return CoreAds.nativeAd(widget.placement);
       },
     );
   }
 
   Future<AdResult<void>> _load() {
     final token = ++_loadToken;
-    return AppAds.load(widget.placement).then((result) {
+    return CoreAds.load(widget.placement).then((result) {
       if (!mounted || token != _loadToken) {
         return result;
       }

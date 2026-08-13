@@ -24,21 +24,21 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
   @override
   void initState() {
     super.initState();
-    AppAds.addLoadListener(_handleAdLoad);
-    _state = _stateFromStatus(AppAds.getStatus(widget.placement));
+    CoreAds.addLoadListener(_handleAdLoad);
+    _state = _stateFromStatus(CoreAds.getStatus(widget.placement));
   }
 
   @override
   void didUpdateWidget(covariant InterstitialActionButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.placement != widget.placement) {
-      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
+      _state = _stateFromStatus(CoreAds.getStatus(widget.placement));
     }
   }
 
   @override
   void dispose() {
-    AppAds.removeLoadListener(_handleAdLoad);
+    CoreAds.removeLoadListener(_handleAdLoad);
     super.dispose();
   }
 
@@ -81,13 +81,13 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
       _state = 'loading';
     });
     await widget.onLoad?.call();
-    await AppAds.load(widget.placement);
+    await CoreAds.load(widget.placement);
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
+      _state = _stateFromStatus(CoreAds.getStatus(widget.placement));
     });
   }
 
@@ -96,13 +96,13 @@ class _InterstitialActionButtonState extends State<InterstitialActionButton> {
       _state = 'showing';
     });
     await widget.onShow?.call();
-    await AppAds.showInterstitial(widget.placement);
+    await CoreAds.showInterstitial(widget.placement);
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _state = _stateFromStatus(AppAds.getStatus(widget.placement));
+      _state = _stateFromStatus(CoreAds.getStatus(widget.placement));
     });
   }
 

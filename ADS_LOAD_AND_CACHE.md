@@ -6,7 +6,7 @@ package.
 Khi thay đổi bất kỳ logic nào liên quan đến các phần sau, phải cập nhật file
 này trong cùng thay đổi:
 
-- `AppAds.load`, `AppAds.getStatus`
+- `CoreAds.load`, `CoreAds.getStatus`
 - `AdsRepository.load`, `AdsRepository.getStatus`
 - các manager trong `lib/src/ads/**`
 - `GoogleAdsService.load`, `_loadWaterfall`, `clear`, `clearType`
@@ -22,10 +22,10 @@ này trong cùng thay đổi:
 
 Ví dụ:
 
-- `AppAds.initialize(...)`
-- `AppAds.load(placement)`
-- `AppAds.showInterstitial(placement)`
-- `AppAds.showRewarded(...)`
+- `CoreAds.initialize(...)`
+- `CoreAds.load(placement)`
+- `CoreAds.showInterstitial(placement)`
+- `CoreAds.showRewarded(...)`
 
 `AdResult.success` nghĩa là operation vừa gọi thành công.
 `AdResult.failure` nghĩa là operation vừa gọi thất bại và có `AdFailure`.
@@ -51,12 +51,12 @@ status. Các trạng thái đó đi qua `AdsCallbacks`.
 Ứng dụng gọi:
 
 ```dart
-await AppAds.load(placement);
+await CoreAds.load(placement);
 ```
 
 Luồng hiện tại:
 
-1. `AppAds.load` kiểm tra repository đã initialize chưa.
+1. `CoreAds.load` kiểm tra repository đã initialize chưa.
 2. Nếu chưa có repository, trả `AdResult.failure(AdFailure.notReady())` và emit load status `failed`.
 3. `AdsRepositoryImpl.load` emit `AdLoadStatus.loading`.
 4. Repository chọn manager theo `placement.type`.
@@ -68,7 +68,7 @@ Luồng hiện tại:
    - `AdLoadStatus.failed` nếu result failure.
 9. Repository trả `AdResult` cho caller.
 
-`AppAds.getStatus(placement)` đọc status từ manager hiện có. Nếu manager chưa
+`CoreAds.getStatus(placement)` đọc status từ manager hiện có. Nếu manager chưa
 tồn tại, trả `AdLoadStatus.idle` và không tạo manager mới.
 
 ## Điều Kiện Được Load
@@ -205,8 +205,8 @@ Package không tự retry vô hạn khi load fail.
 
 Khi user bấm retry:
 
-- widget gọi lại `AppAds.load(placement)`.
-- nếu success, widget render `AppAds.banner(...)` hoặc `AppAds.nativeAd(...)`.
+- widget gọi lại `CoreAds.load(placement)`.
+- nếu success, widget render `CoreAds.banner(...)` hoặc `CoreAds.nativeAd(...)`.
 - nếu fail, widget tiếp tục hiển thị error.
 
 ### Waterfall Không Phải Retry
@@ -219,7 +219,7 @@ Ví dụ 3 ids:
 id_0 fail -> id_1 fail -> id_2 success
 ```
 
-Vẫn được xem là một lần `AppAds.load` success.
+Vẫn được xem là một lần `CoreAds.load` success.
 
 ### Fullscreen Retry
 
@@ -228,7 +228,7 @@ Fullscreen không tự retry sau load fail.
 Ứng dụng có thể gọi lại:
 
 ```dart
-await AppAds.load(placement);
+await CoreAds.load(placement);
 ```
 
 hoặc dùng UI listener/status để hiện nút retry.
@@ -269,7 +269,7 @@ ad instance không thể mount ở nhiều vị trí trong widget tree.
 - `BannerManager` status `ready` nghĩa là có cached banner.
 - Khi load mới thực sự chạy, service dispose cached banner cũ trước.
 - `AdsBanner` mặc định `clearOnDispose: true`, nên khi widget dispose sẽ gọi
-  `AppAds.clear(placement)`.
+  `CoreAds.clear(placement)`.
 - Nếu muốn giữ cache khi đổi màn, set `clearOnDispose: false`.
 
 ### Native
@@ -313,13 +313,13 @@ ad instance không thể mount ở nhiều vị trí trong widget tree.
 Clear từng placement:
 
 ```dart
-await AppAds.clear(placement);
+await CoreAds.clear(placement);
 ```
 
 Clear theo type:
 
 ```dart
-await AppAds.clearType(AdType.interstitial);
+await CoreAds.clearType(AdType.interstitial);
 ```
 
 Khi clear:
@@ -333,15 +333,15 @@ service clear theo type.
 
 ## Load Listener
 
-`AppAds.addLoadListener` cho UI listen tiến trình/kết quả của load operation
-được phát ra khi app gọi `AppAds.load(...)`.
+`CoreAds.addLoadListener` cho UI listen tiến trình/kết quả của load operation
+được phát ra khi app gọi `CoreAds.load(...)`.
 
 Listener này không phải source of truth cho trạng thái cache hiện tại của
 placement. Nếu UI cần biết trạng thái hiện tại sau các flow như show, clear,
-hoặc preload nội bộ sau fullscreen show, hãy đọc `AppAds.getStatus(placement)`.
+hoặc preload nội bộ sau fullscreen show, hãy đọc `CoreAds.getStatus(placement)`.
 
 ```dart
-AppAds.addLoadListener((event) {
+CoreAds.addLoadListener((event) {
   final placement = event.placement;
   final status = event.status;
   final failure = event.failure;

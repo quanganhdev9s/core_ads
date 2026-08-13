@@ -23,10 +23,10 @@ class ExampleAdsManager extends ChangeNotifier {
     notifyListeners();
 
     if (_isPremiumUser) {
-      AppAds.clearType(AdType.banner);
-      AppAds.clearType(AdType.native);
-      AppAds.clearType(AdType.interstitial);
-      AppAds.clearType(AdType.appOpen);
+      CoreAds.clearType(AdType.banner);
+      CoreAds.clearType(AdType.native);
+      CoreAds.clearType(AdType.interstitial);
+      CoreAds.clearType(AdType.appOpen);
     }
   }
 
@@ -42,7 +42,7 @@ class ExampleAdsManager extends ChangeNotifier {
       return existingFuture;
     }
 
-    final future = AppAds.initialize(_config(callbacks));
+    final future = CoreAds.initialize(_config(callbacks));
     _initializeFuture = future;
     final result = await future;
 
@@ -60,7 +60,7 @@ class ExampleAdsManager extends ChangeNotifier {
       return Future.value(const AdResult.success(null));
     }
 
-    return AppAds.load(placement);
+    return CoreAds.load(placement);
   }
 
   Future<AdResult<void>> showInterstitial(AdPlacement placement) {
@@ -68,7 +68,7 @@ class ExampleAdsManager extends ChangeNotifier {
       return Future.value(const AdResult.success(null));
     }
 
-    return AppAds.showInterstitial(placement);
+    return CoreAds.showInterstitial(placement);
   }
 
   Future<AdResult<void>> showAppOpen(AdPlacement placement) {
@@ -76,7 +76,7 @@ class ExampleAdsManager extends ChangeNotifier {
       return Future.value(const AdResult.success(null));
     }
 
-    return AppAds.showAppOpen(placement);
+    return CoreAds.showAppOpen(placement);
   }
 
   Future<AdResult<void>> showRewarded({
@@ -89,7 +89,7 @@ class ExampleAdsManager extends ChangeNotifier {
       return Future.value(const AdResult.success(null));
     }
 
-    return AppAds.showRewarded(
+    return CoreAds.showRewarded(
       placement: placement,
       onRewardEarned: onRewardEarned,
     );
@@ -105,24 +105,24 @@ class ExampleAdsManager extends ChangeNotifier {
       return Future.value(const AdResult.success(null));
     }
 
-    return AppAds.showRewardedInterstitial(
+    return CoreAds.showRewardedInterstitial(
       placement: placement,
       onRewardEarned: onRewardEarned,
     );
   }
 
   Future<void> clear(AdPlacement placement) {
-    return AppAds.clear(placement);
+    return CoreAds.clear(placement);
   }
 
   Future<void> clearType(AdType type) {
-    return AppAds.clearType(type);
+    return CoreAds.clearType(type);
   }
 
   Future<void> disposeAds() async {
     _initializeFuture = null;
     _isInitialized = false;
-    await AppAds.dispose();
+    await CoreAds.dispose();
   }
 
   bool _shouldSkipPlacement(AdPlacement placement) {

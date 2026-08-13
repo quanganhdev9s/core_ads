@@ -43,6 +43,6 @@ class AdsAppLifecycleObserver with WidgetsBindingObserver {
       return;
     }
 
-    AppAds.handleAppResume(appOpenPlacement);
+    CoreAds.handleAppResume(appOpenPlacement);
   }
 }

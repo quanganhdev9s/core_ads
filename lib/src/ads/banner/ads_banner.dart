@@ -80,7 +80,7 @@ class _AdsBannerState extends State<AdsBanner> {
     AdsReloadNotifier.instance.removePlacementListener(_handlePlacementReload);
     AdsReloadNotifier.instance.removeTypeListener(_handleTypeReload);
     if (widget.clearOnDispose) {
-      AppAds.clear(widget.placement);
+      CoreAds.clear(widget.placement);
     }
     super.dispose();
   }
@@ -90,7 +90,7 @@ class _AdsBannerState extends State<AdsBanner> {
     super.didUpdateWidget(oldWidget);
     final placementChanged = oldWidget.placement != widget.placement;
     if (placementChanged && oldWidget.clearOnDispose) {
-      AppAds.clear(oldWidget.placement);
+      CoreAds.clear(oldWidget.placement);
     }
 
     if (placementChanged || oldWidget.config != widget.config) {
@@ -132,7 +132,7 @@ class _AdsBannerState extends State<AdsBanner> {
               return _buildError(context, resolvedConfig);
             }
 
-            return AppAds.banner(widget.placement);
+            return CoreAds.banner(widget.placement);
           },
         );
       },
@@ -153,7 +153,7 @@ class _AdsBannerState extends State<AdsBanner> {
 
   Future<AdResult<void>> _load(BannerAdConfig config) {
     final token = ++_loadToken;
-    return AppAds.load(widget.placement, bannerConfig: config).then((result) {
+    return CoreAds.load(widget.placement, bannerConfig: config).then((result) {
       if (!mounted || token != _loadToken) {
         return result;
       }
