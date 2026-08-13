@@ -16,7 +16,6 @@ import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../ads/banner/banner_ad_config.dart';
-import '../ads/native/native_ad_config.dart';
 import 'ads_service.dart';
 
 /// Google Mobile Ads implementation of [AdsService].
@@ -265,16 +264,11 @@ class GoogleAdsService implements AdsService {
   @override
   Widget nativeAd(AdPlacement placement) {
     final ad = _nativeAds[placement];
-    final config = _config?.nativeAdConfigs.configFor(placement);
-    if (ad == null || config == null) {
+    if (ad == null) {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      width: config.width,
-      height: config.height,
-      child: AdWidget(ad: ad),
-    );
+    return AdWidget(ad: ad);
   }
 
   @override
@@ -322,10 +316,7 @@ class GoogleAdsService implements AdsService {
       return _missingAdUnitId(placement);
     }
 
-    final bannerConfig =
-        config ??
-        _config?.bannerAdConfigs.configFor(placement) ??
-        const BannerAdConfig.banner();
+    final bannerConfig = config ?? const BannerAdConfig.banner();
     final adSize = await _bannerAdSize(bannerConfig);
     if (adSize == null) {
       return AdResult.failure(
@@ -410,12 +401,12 @@ class GoogleAdsService implements AdsService {
       return _missingAdUnitId(placement);
     }
 
-    final nativeConfig = _config?.nativeAdConfigs.configFor(placement);
-    if (nativeConfig == null) {
+    final factoryId = placement.nativeFactoryId;
+    if (factoryId == null || factoryId.isEmpty) {
       return AdResult.failure(
         AdFailure(
-          code: 'missing_native_ad_config',
-          message: 'Missing native ad config for placement ${placement.key}.',
+          code: 'missing_native_factory_id',
+          message: 'Missing native factory ID for placement ${placement.key}.',
         ),
       );
     }
@@ -427,7 +418,7 @@ class GoogleAdsService implements AdsService {
       load: (adUnitId) => _loadNativeWithAdUnitId(
         placement,
         adUnitId: adUnitId,
-        nativeConfig: nativeConfig,
+        factoryId: factoryId,
       ),
     );
   }
@@ -435,15 +426,14 @@ class GoogleAdsService implements AdsService {
   Future<AdResult<void>> _loadNativeWithAdUnitId(
     AdPlacement placement, {
     required String adUnitId,
-    required NativeAdConfig nativeConfig,
+    required String factoryId,
   }) async {
     final completer = Completer<AdResult<void>>();
 
     final nativeAd = NativeAd(
       adUnitId: adUnitId,
-      factoryId: nativeConfig.factoryId,
+      factoryId: factoryId,
       request: _request,
-      customOptions: nativeConfig.customOptions,
       listener: NativeAdListener(
         onAdLoaded: (ad) {
           _nativeAds[placement] = ad as NativeAd;

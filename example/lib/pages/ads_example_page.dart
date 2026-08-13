@@ -423,6 +423,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           if (_adsInitialized)
             AdsNative(
               placement: ExamplePlacements.native,
+              height: 260,
               loading: const AdsLoadingWidget(height: 260),
               error: const SizedBox(
                 height: 260,

@@ -5,8 +5,6 @@ import 'ads_consent_config.dart';
 import 'ads_request_config.dart';
 import 'ad_unit_ids.dart';
 import 'ads_environment.dart';
-import '../../ads/banner/banner_ad_config.dart';
-import '../../ads/native/native_ad_config.dart';
 
 /// Runtime configuration for the ads package.
 class AdsConfig {
@@ -17,8 +15,6 @@ class AdsConfig {
     this.network = AdNetwork.google,
     this.consent = const AdsConsentConfig(),
     this.request = const AdsRequestConfig(),
-    this.bannerAdConfigs = const BannerAdConfigs({}),
-    this.nativeAdConfigs = const NativeAdConfigs({}),
     this.fullscreenCooldown = const FullscreenAdCooldownConfig(),
     this.callbacks = const AdsCallbacks(),
     this.enableDebugLogs = false,
@@ -38,12 +34,6 @@ class AdsConfig {
 
   /// Global ad request configuration.
   final AdsRequestConfig request;
-
-  /// Banner ad size configuration by placement.
-  final BannerAdConfigs bannerAdConfigs;
-
-  /// Native ad rendering configuration by placement.
-  final NativeAdConfigs nativeAdConfigs;
 
   /// Cooldown rules for fullscreen ads.
   final FullscreenAdCooldownConfig fullscreenCooldown;

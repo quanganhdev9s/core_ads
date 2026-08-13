@@ -10,6 +10,7 @@ final class AdPlacement {
     required this.key,
     required this.type,
     this.preloadAfterShow = true,
+    this.nativeFactoryId,
   });
 
   /// Stable placement key, such as `home_top` or `level_complete`.
@@ -21,6 +22,9 @@ final class AdPlacement {
   /// Whether this placement should preload again after a successful fullscreen
   /// show.
   final bool preloadAfterShow;
+
+  /// Platform native ad factory ID used when [type] is [AdType.native].
+  final String? nativeFactoryId;
 
   @override
   bool operator ==(Object other) {

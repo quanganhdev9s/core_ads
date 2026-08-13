@@ -5,11 +5,16 @@ class ExamplePlacements {
 
   static const banner = AdPlacement(key: 'example_banner', type: AdType.banner);
 
-  static const native = AdPlacement(key: 'example_native', type: AdType.native);
+  static const native = AdPlacement(
+    key: 'example_native',
+    type: AdType.native,
+    nativeFactoryId: 'example_native_factory',
+  );
 
   static const collapsibleNative = AdPlacement(
     key: 'example_collapsible_native',
     type: AdType.native,
+    nativeFactoryId: 'example_native_factory',
   );
 
   static const collapsedBanner = AdPlacement(

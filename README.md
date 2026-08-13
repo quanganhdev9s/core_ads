@@ -23,6 +23,7 @@ class AppAdPlacements {
   static const articleNative = AdPlacement(
     key: 'article_native',
     type: AdType.native,
+    nativeFactoryId: 'article_native_factory',
   );
 
   static const levelCompleteInterstitial = AdPlacement(
@@ -65,15 +66,6 @@ await CoreAds.initialize(
       ),
       AppAdPlacements.appOpen: AdUnitId.single('ca-app-pub-xxx/app_open'),
     }),
-    bannerAdConfigs: BannerAdConfigs({
-      AppAdPlacements.homeBanner: BannerAdConfig.anchoredAdaptive(),
-    }),
-    nativeAdConfigs: NativeAdConfigs({
-      AppAdPlacements.articleNative: NativeAdConfig(
-        factoryId: 'article_native_factory',
-        height: 140,
-      ),
-    }),
     consent: AdsConsentConfig(
       enabled: true,
       requestTrackingAuthorizationOnIos: true,
@@ -94,6 +86,7 @@ const AdsBanner(placement: AppAdPlacements.homeBanner);
 
 const AdsNative(
   placement: AppAdPlacements.articleNative,
+  height: 140,
   loading: AdsLoadingWidget(height: 140),
 );
 
@@ -220,21 +213,23 @@ This avoids reusing one `BannerAd` object in multiple `AdWidget`s.
 
 ## Native
 
-Native ads require a platform factory. The `factoryId` in Dart must match the
-factory registered on Android and iOS.
+Native ads require a platform factory. The `nativeFactoryId` in `AdPlacement`
+must match the factory registered on Android and iOS.
 
 1. Configure native in Dart:
 
 ```dart
+class AppAdPlacements {
+  static const articleNative = AdPlacement(
+    key: 'article_native',
+    type: AdType.native,
+    nativeFactoryId: 'article_native_factory',
+  );
+}
+
 AdsConfig(
   adUnitIds: AdUnitIds({
     AppAdPlacements.articleNative: 'ca-app-pub-xxx/native',
-  }),
-  nativeAdConfigs: NativeAdConfigs({
-    AppAdPlacements.articleNative: NativeAdConfig(
-      factoryId: 'article_native_factory',
-      height: 140,
-    ),
   }),
 );
 ```
@@ -264,6 +259,7 @@ FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
 ```dart
 const AdsNative(
   placement: AppAdPlacements.articleNative,
+  height: 140,
   loading: AdsLoadingWidget(height: 140),
 );
 ```
@@ -279,9 +275,8 @@ AdsNative(
 );
 ```
 
-By default, `AdsNative` clears its cached ad when the widget is disposed. Set
-`clearOnDispose: false` only when the app intentionally wants to keep the
-placement cached.
+Set `clearOnDispose: true` when the widget should clear its cached ad when it
+is disposed.
 
 Like banners, multiple native widgets that can exist at the same time should use
 multiple placements. Those placements can still share one native ad unit ID.
@@ -296,6 +291,7 @@ class AppAdPlacements {
   static const articleNative = AdPlacement(
     key: 'article_native',
     type: AdType.native,
+    nativeFactoryId: 'article_native_factory',
   );
 
   static const articleCollapsedBanner = AdPlacement(
@@ -485,7 +481,7 @@ Every operation returns `AdResult<void>`. Important failure codes:
 - `not_ready`: no ad is ready to show, or ads were not initialized yet.
 - `missing_ad_unit_id`: no ad unit ID is configured for the placement.
 - `invalid_banner_size`: adaptive banner size could not be resolved.
-- `missing_native_ad_config`: native placement has no `NativeAdConfig`.
+- `missing_native_factory_id`: native placement has no `nativeFactoryId`.
 - `missing_native_ad_factory`: platform native factory was not registered.
 - `test_ad_unit_in_production`: production config contains Google sample ad
   unit IDs.
@@ -538,6 +534,6 @@ Before releasing:
   fails initialization in production mode.
 - Disable `resetOnInitialize` for consent.
 - Add `NSUserTrackingUsageDescription` on iOS when ATT is enabled.
-- Register every native ad factory used by `NativeAdConfig.factoryId` on both
+- Register every native ad factory used by `AdPlacement.nativeFactoryId` on both
   Android and iOS.
 - Keep `enableDebugLogs` off unless you intentionally want package logs.

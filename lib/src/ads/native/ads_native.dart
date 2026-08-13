@@ -113,7 +113,11 @@ class _AdsNativeState extends State<AdsNative> {
           return _buildError(context);
         }
 
-        return CoreAds.nativeAd(widget.placement);
+        return SizedBox(
+          width: widget.width,
+          height: widget.height,
+          child: CoreAds.nativeAd(widget.placement),
+        );
       },
     );
   }

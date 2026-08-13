@@ -11,6 +11,6 @@ This example demonstrates the public `core_ads` API:
 - clear APIs
 
 Native ads require a platform native ad factory registered with the ID used by
-`NativeAdConfig.factoryId`.
+`AdPlacement.nativeFactoryId`.
 
 The sample uses Google test ad unit IDs.

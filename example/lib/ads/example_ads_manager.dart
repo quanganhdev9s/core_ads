@@ -1,7 +1,6 @@
 import 'package:core_ads/core_ads.dart';
 import 'package:flutter/foundation.dart';
 
-import 'example_ad_configs.dart';
 import 'example_ad_unit_ids.dart';
 import 'example_placements.dart';
 
@@ -174,14 +173,6 @@ class ExampleAdsManager extends ChangeNotifier {
         ExamplePlacements.collapsibleNative: AdUnitId.single(
           ExampleAdUnitIds.native,
         ),
-      }),
-      bannerAdConfigs: BannerAdConfigs({
-        ExamplePlacements.banner: ExampleAdConfigs.banner,
-        ExamplePlacements.collapsedBanner: ExampleAdConfigs.collapsedBanner,
-      }),
-      nativeAdConfigs: NativeAdConfigs({
-        ExamplePlacements.native: ExampleAdConfigs.native,
-        ExamplePlacements.collapsibleNative: ExampleAdConfigs.native,
       }),
       consent: const AdsConsentConfig(
         enabled: true,

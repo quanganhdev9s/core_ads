@@ -1,4 +1,3 @@
-import '../../core/config/ad_placement.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Supported fixed banner sizes.
@@ -134,18 +133,4 @@ class BannerAdConfig {
 
   @override
   int get hashCode => Object.hash(size, width, height);
-}
-
-/// Banner ad configuration grouped by placement.
-class BannerAdConfigs {
-  /// Creates banner ad configurations.
-  const BannerAdConfigs(this.values);
-
-  /// Placement-to-banner-config values.
-  final Map<AdPlacement, BannerAdConfig> values;
-
-  /// Returns banner config for [placement].
-  BannerAdConfig configFor(AdPlacement placement) {
-    return values[placement] ?? const BannerAdConfig.banner();
-  }
 }
