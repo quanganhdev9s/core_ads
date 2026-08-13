@@ -31,6 +31,10 @@ class RewardedInterstitialManager implements AdManager {
   AdLoadStatus get status => _status;
 
   @override
+  bool get canShow =>
+      _status == AdLoadStatus.ready && !fullscreenAdController.isShowing;
+
+  @override
   Future<AdResult<void>> load() async {
     if (_status == AdLoadStatus.ready) {
       return const AdResult.success(null);

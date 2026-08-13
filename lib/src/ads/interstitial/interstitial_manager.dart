@@ -34,6 +34,17 @@ class InterstitialManager implements AdManager {
   AdLoadStatus get status => _status;
 
   @override
+  bool get canShow {
+    if (_status != AdLoadStatus.ready || fullscreenAdController.isShowing) {
+      return false;
+    }
+
+    return fullscreenAdController
+        .canShow(placement, fullscreenCooldown)
+        .isSuccess;
+  }
+
+  @override
   Future<AdResult<void>> load() async {
     if (_status == AdLoadStatus.ready) {
       return const AdResult.success(null);

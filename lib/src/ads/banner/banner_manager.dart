@@ -29,6 +29,9 @@ class BannerManager implements AdManager {
   @override
   AdLoadStatus get status => _status;
 
+  @override
+  bool get canShow => false;
+
   /// Whether a banner is available to be reused.
   bool get hasCachedBanner => _status == AdLoadStatus.ready;
 

@@ -9,6 +9,11 @@ Apps import only:
 import 'package:core_ads/core_ads.dart';
 ```
 
+Detailed lifecycle notes:
+
+- [Ads Load And Cache](ADS_LOAD_AND_CACHE.md)
+- [Ads Show](ADS_SHOW.md)
+
 ## Quick Start
 
 1. Define placements in the host app:
@@ -91,7 +96,9 @@ const AdsNative(
 );
 
 await CoreAds.load(AppAdPlacements.levelCompleteInterstitial);
-await CoreAds.showInterstitial(AppAdPlacements.levelCompleteInterstitial);
+if (CoreAds.canShow(AppAdPlacements.levelCompleteInterstitial)) {
+  await CoreAds.showInterstitial(AppAdPlacements.levelCompleteInterstitial);
+}
 ```
 
 Always inspect returned results when the action controls app flow:
@@ -132,6 +139,7 @@ real app IDs from AdMob.
 ```dart
 CoreAds.initialize(config);
 CoreAds.load(placement);
+CoreAds.canShow(placement);
 CoreAds.banner(placement);
 CoreAds.nativeAd(placement);
 CoreAds.showInterstitial(placement);

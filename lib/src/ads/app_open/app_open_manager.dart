@@ -39,6 +39,20 @@ class AppOpenManager implements AdManager {
   @override
   AdLoadStatus get status => _status;
 
+  @override
+  bool get canShow {
+    if (_isShowing ||
+        _status != AdLoadStatus.ready ||
+        isExpired ||
+        fullscreenAdController.isShowing) {
+      return false;
+    }
+
+    return fullscreenAdController
+        .canShow(placement, fullscreenCooldown)
+        .isSuccess;
+  }
+
   /// Whether the cached app open ad has expired.
   bool get isExpired {
     final loadedAt = _loadedAt;

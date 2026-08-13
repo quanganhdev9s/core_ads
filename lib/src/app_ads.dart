@@ -160,6 +160,11 @@ class CoreAds {
     return _repository?.getStatus(placement) ?? AdLoadStatus.idle;
   }
 
+  /// Returns whether [placement] currently has a showable fullscreen ad.
+  static bool canShow(AdPlacement placement) {
+    return _repository?.canShow(placement) ?? false;
+  }
+
   /// Builds a banner widget for [placement].
   static Widget banner(AdPlacement placement) {
     final repository = _repository;

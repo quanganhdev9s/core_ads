@@ -6,6 +6,9 @@ abstract interface class AdManager {
   /// Current lifecycle status managed by this manager.
   AdLoadStatus get status;
 
+  /// Whether this manager currently has an ad that can be shown.
+  bool get canShow;
+
   /// Loads or preloads the ad managed by this manager.
   Future<AdResult<void>> load();
 

@@ -25,6 +25,9 @@ class NativeManager implements AdManager {
   @override
   AdLoadStatus get status => _status;
 
+  @override
+  bool get canShow => false;
+
   /// Whether a native ad is available for rendering.
   bool get hasCachedNativeAd => _status == AdLoadStatus.ready;
 

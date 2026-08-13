@@ -59,6 +59,18 @@ void main() {
       expect(secondRepository.disposeCount, 0);
     },
   );
+
+  test('canShow returns false before initialize', () {
+    expect(CoreAds.canShow(_placement), isFalse);
+  });
+
+  test('canShow delegates to active repository', () async {
+    final repository = _FakeAdsRepository(canShowResult: true);
+
+    await CoreAds.initialize(_config(), repository: repository);
+
+    expect(CoreAds.canShow(_placement), isTrue);
+  });
 }
 
 const _placement = AdPlacement(
@@ -74,9 +86,13 @@ AdsConfig _config() {
 }
 
 class _FakeAdsRepository implements AdsRepository {
-  _FakeAdsRepository({this.initializeResult = const AdResult.success(null)});
+  _FakeAdsRepository({
+    this.initializeResult = const AdResult.success(null),
+    this.canShowResult = false,
+  });
 
   final AdResult<void> initializeResult;
+  final bool canShowResult;
 
   int initializeCount = 0;
   int loadCount = 0;
@@ -99,6 +115,9 @@ class _FakeAdsRepository implements AdsRepository {
 
   @override
   AdLoadStatus getStatus(AdPlacement placement) => AdLoadStatus.idle;
+
+  @override
+  bool canShow(AdPlacement placement) => canShowResult;
 
   @override
   Widget banner(AdPlacement placement) => const SizedBox.shrink();

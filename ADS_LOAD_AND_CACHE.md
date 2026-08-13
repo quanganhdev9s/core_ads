@@ -3,6 +3,8 @@
 Tài liệu này mô tả cơ chế load, waterfall, preload, retry và cache hiện tại của
 package.
 
+Show lifecycle được mô tả riêng trong `ADS_SHOW.md`.
+
 Khi thay đổi bất kỳ logic nào liên quan đến các phần sau, phải cập nhật file
 này trong cùng thay đổi:
 

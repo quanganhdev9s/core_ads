@@ -20,6 +20,9 @@ abstract interface class AdsRepository {
   /// Returns current load/cache status for [placement].
   AdLoadStatus getStatus(AdPlacement placement);
 
+  /// Returns whether [placement] currently has a showable fullscreen ad.
+  bool canShow(AdPlacement placement);
+
   /// Builds a banner widget for [placement].
   Widget banner(AdPlacement placement);
 

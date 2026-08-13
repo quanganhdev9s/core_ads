@@ -121,6 +121,19 @@ class AdsRepositoryImpl implements AdsRepository {
   }
 
   @override
+  bool canShow(AdPlacement placement) {
+    return switch (placement.type) {
+      AdType.banner => false,
+      AdType.interstitial => _interstitialManagers[placement]?.canShow ?? false,
+      AdType.rewarded => _rewardManagers[placement]?.canShow ?? false,
+      AdType.rewardedInterstitial =>
+        _rewardedInterstitialManagers[placement]?.canShow ?? false,
+      AdType.native => false,
+      AdType.appOpen => _appOpenManagers[placement]?.canShow ?? false,
+    };
+  }
+
+  @override
   Widget banner(AdPlacement placement) {
     if (placement.type != AdType.banner) {
       return const SizedBox.shrink();
