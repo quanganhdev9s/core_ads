@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
 import '../../core/config/ads_config.dart';
+import '../../core/consent/ads_consent_notifier.dart';
 import '../../core/enums/ad_type.dart';
+import '../../core/events/ads_consent_event.dart';
 import '../../core/events/ads_failure_event.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
 import '../../core/fullscreen/fullscreen_ad_cooldown_config.dart';
@@ -59,6 +61,13 @@ class AdsRepositoryImpl implements AdsRepository {
   @override
   Future<AdResult<void>> initialize() async {
     final consentResult = await consentManager.requestConsent(config);
+    AdsConsentNotifier.instance.notify(
+      AdsConsentEvent(
+        result: consentResult,
+        canRequestAds: consentManager.canRequestAds,
+      ),
+    );
+
     if (consentResult.isFailure) {
       return consentResult;
     }

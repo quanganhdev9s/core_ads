@@ -31,9 +31,8 @@ class GoogleConsentManager extends ConsentManager {
 
     if (!config.consent.enabled) {
       updateCanRequestAds(true);
-      _logger.log(
-        'Consent request completed: flow disabled, canRequestAds=true',
-      );
+      _logger.log('Consent request skipped: disabled');
+      _logger.log('Consent final canRequestAds=true, result=success');
       return const AdResult.success(null);
     }
 
@@ -43,7 +42,12 @@ class GoogleConsentManager extends ConsentManager {
         _logger.log('Consent state reset');
       }
 
-      await _requestConsentInfoUpdate(config.consent);
+      final umpResult = await _requestConsentInfoUpdate(config.consent);
+      if (umpResult.isFailure) {
+        updateCanRequestAds(false);
+        _logConsentResult(umpResult, canRequestAds: false);
+        return umpResult;
+      }
 
       final formError = await _loadAndShowConsentFormIfRequired();
       if (formError != null) {
@@ -69,10 +73,9 @@ class GoogleConsentManager extends ConsentManager {
 
       final canRequest = await ConsentInformation.instance.canRequestAds();
       updateCanRequestAds(canRequest);
-      _logger.log('Consent canRequestAds=$canRequest');
 
       if (!canRequest) {
-        _logger.log('Consent request completed: canRequestAds=false');
+        _logger.log('Consent final canRequestAds=false, result=success');
         return const AdResult.success(null);
       }
 
@@ -92,10 +95,12 @@ class GoogleConsentManager extends ConsentManager {
   void _logConsentResult(AdResult<void> result, {required bool canRequestAds}) {
     switch (result) {
       case AdSuccess<void>():
-        _logger.log('Consent request completed: canRequestAds=$canRequestAds');
+        _logger.log(
+          'Consent final canRequestAds=$canRequestAds, result=success',
+        );
       case AdFailed<void>(failure: final failure):
         _logger.log(
-          'Consent request failed: ${failure.code}, canRequestAds=$canRequestAds',
+          'Consent final canRequestAds=$canRequestAds, result=failed ${failure.code}',
         );
     }
   }
@@ -114,8 +119,9 @@ class GoogleConsentManager extends ConsentManager {
     return const AdResult.success(null);
   }
 
-  Future<void> _requestConsentInfoUpdate(AdsConsentConfig config) {
-    final completer = Completer<void>();
+  Future<AdResult<void>> _requestConsentInfoUpdate(AdsConsentConfig config) {
+    _logger.log('UMP request started');
+    final completer = Completer<AdResult<void>>();
     final params = ConsentRequestParameters(
       tagForUnderAgeOfConsent: config.tagForUnderAgeOfConsent,
       consentDebugSettings: _debugSettings(config),
@@ -125,12 +131,22 @@ class GoogleConsentManager extends ConsentManager {
       params,
       () {
         if (!completer.isCompleted) {
-          completer.complete();
+          _logger.log('UMP request completed: success');
+          completer.complete(const AdResult.success(null));
         }
       },
       (error) {
         if (!completer.isCompleted) {
-          completer.completeError(error);
+          _logger.log('UMP request completed: failed ${error.errorCode}');
+          completer.complete(
+            AdResult.failure(
+              AdFailure(
+                code: 'ump_request_failed',
+                message: error.message,
+                cause: error,
+              ),
+            ),
+          );
         }
       },
     );

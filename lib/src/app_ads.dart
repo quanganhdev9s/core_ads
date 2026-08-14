@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'core/config/ads_config.dart';
 import 'core/config/ad_placement.dart';
+import 'core/consent/ads_consent_notifier.dart';
 import 'core/enums/ad_load_status.dart';
 import 'core/enums/ad_type.dart';
 import 'core/fullscreen/fullscreen_ad_cooldown_config.dart';
@@ -32,6 +33,16 @@ class CoreAds {
   /// Removes a listener for placement load operation progress.
   static void removeLoadListener(AdsLoadListener listener) {
     AdsLoadNotifier.instance.removeListener(listener);
+  }
+
+  /// Adds a listener called when the consent request flow completes.
+  static void addConsentListener(AdsConsentListener listener) {
+    AdsConsentNotifier.instance.addListener(listener);
+  }
+
+  /// Removes a consent completion listener.
+  static void removeConsentListener(AdsConsentListener listener) {
+    AdsConsentNotifier.instance.removeListener(listener);
   }
 
   /// Initializes the ads package.

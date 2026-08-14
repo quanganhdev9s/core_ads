@@ -17,19 +17,22 @@ class AppTrackingTransparencyManager {
     required AdsLogger logger,
   }) async {
     if (!config.requestTrackingAuthorizationOnIos) {
-      logger.log('ATT request disabled');
+      logger.log('ATT request skipped: disabled');
       return const AdResult.success(null);
     }
 
     if (defaultTargetPlatform != TargetPlatform.iOS) {
+      logger.log('ATT request skipped: platform=${defaultTargetPlatform.name}');
       return const AdResult.success(null);
     }
 
     try {
+      logger.log('ATT request started');
       final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-      logger.log('ATT status=$status');
+      logger.log('ATT currentStatus=$status');
 
       if (status != TrackingStatus.notDetermined) {
+        logger.log('ATT request completed: status=$status');
         return const AdResult.success(null);
       }
 
@@ -39,10 +42,11 @@ class AppTrackingTransparencyManager {
 
       final updatedStatus =
           await AppTrackingTransparency.requestTrackingAuthorization();
-      logger.log('ATT updatedStatus=$updatedStatus');
+      logger.log('ATT request completed: status=$updatedStatus');
 
       return const AdResult.success(null);
     } catch (error) {
+      logger.log('ATT request completed: failed');
       return AdResult.failure(
         AdFailure.unknown('Failed to request ATT authorization', error),
       );

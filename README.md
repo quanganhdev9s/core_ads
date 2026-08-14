@@ -55,6 +55,12 @@ is used in the app.
 2. Initialize ads:
 
 ```dart
+CoreAds.addConsentListener((event) {
+  final canRequestAds = event.canRequestAds;
+  final failure = event.failure;
+  // Update consent-related UI here.
+});
+
 await CoreAds.initialize(
   AdsConfig(
     environment: AdsEnvironment.production,
@@ -138,6 +144,8 @@ real app IDs from AdMob.
 
 ```dart
 CoreAds.initialize(config);
+CoreAds.addConsentListener((event) {});
+CoreAds.removeConsentListener(listener);
 CoreAds.load(placement);
 CoreAds.canShow(placement);
 CoreAds.updateFullscreenCooldown(cooldown);
