@@ -114,7 +114,7 @@ Luong hien tai:
 7. Service emit callbacks theo SDK lifecycle.
 8. Manager release fullscreen lock.
 9. Neu show success, manager mark shown va consume cache.
-10. Neu `preloadAfterShow == true`, manager load lai.
+10. Neu `preloadAfterShow == true`, manager load lai trong background.
 
 Sau show success, ad interstitial cu khong con reusable.
 
@@ -264,9 +264,11 @@ Sau show success:
 
 - fullscreen ad da cache bi dispose/remove trong service callback.
 - manager set status ve `idle`.
-- neu `preloadAfterShow == true`, manager goi `load()` lai.
+- neu `preloadAfterShow == true`, manager goi `load()` lai trong background.
 - neu preload lai success, status ve `ready`.
 - neu preload lai fail, status ve `failed`.
+
+`show...()` tra ket qua show, khong doi preload sau show hoan tat.
 
 Sau show failure:
 

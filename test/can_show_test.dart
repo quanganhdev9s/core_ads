@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core_ads/core_ads.dart';
 import 'package:core_ads/src/ads/app_open/app_open_manager.dart';
 import 'package:core_ads/src/ads/banner/banner_manager.dart';
@@ -157,6 +159,33 @@ void main() {
       expect(repository.canShow(_interstitial), isTrue);
     },
   );
+
+  test('interstitial show does not wait for preload after show', () async {
+    final preloadCompleter = Completer<AdResult<void>>();
+    final service = _FakeAdsService(
+      loadResults: [
+        Future.value(const AdResult.success(null)),
+        preloadCompleter.future,
+      ],
+    );
+    final manager = InterstitialManager(
+      service: service,
+      consentManager: ConsentManager(),
+      placement: _interstitial,
+      fullscreenAdController: FullscreenAdController(),
+      preloadAfterShow: true,
+    );
+
+    await manager.load();
+    final showFuture = manager.show();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(await showFuture, isA<AdSuccess<void>>());
+    expect(service.loadCount, 2);
+    expect(preloadCompleter.isCompleted, isFalse);
+
+    preloadCompleter.complete(const AdResult.success(null));
+  });
 }
 
 final _now = DateTime(2026, 1, 1);
@@ -187,6 +216,11 @@ AdsConfig _config({FullscreenAdCooldownConfig? fullscreenCooldown}) {
 }
 
 class _FakeAdsService implements AdsService {
+  _FakeAdsService({this.loadResults = const []});
+
+  final List<Future<AdResult<void>>> loadResults;
+  int loadCount = 0;
+
   @override
   Future<AdResult<void>> initialize(AdsConfig config) async {
     return const AdResult.success(null);
@@ -197,6 +231,11 @@ class _FakeAdsService implements AdsService {
     AdPlacement placement, {
     BannerAdConfig? bannerConfig,
   }) async {
+    final index = loadCount++;
+    if (index < loadResults.length) {
+      return loadResults[index];
+    }
+
     return const AdResult.success(null);
   }
 

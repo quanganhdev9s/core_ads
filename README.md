@@ -367,9 +367,10 @@ await CoreAds.showRewardedInterstitial(
 Fullscreen ads share a global lock, so interstitial, rewarded, rewarded
 interstitial, and app open ads cannot show on top of each other.
 
-By default, each fullscreen placement preloads again after a successful show.
-Disable this on the placement when the app wants to decide the next preload
-moment manually:
+By default, each fullscreen placement preloads again in the background after a
+successful show. The show future returns the show result and does not wait for
+that next preload. Disable this on the placement when the app wants to decide
+the next preload moment manually:
 
 ```dart
 static const levelCompleteInterstitial = AdPlacement(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_load_status.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
@@ -102,7 +104,7 @@ class InterstitialManager implements AdManager {
     if (result.isSuccess) {
       fullscreenAdController.markShown(placement);
       if (preloadAfterShow) {
-        await load();
+        unawaited(load());
       }
     }
 

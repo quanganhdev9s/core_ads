@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../core/config/ad_placement.dart';
 import '../../core/enums/ad_load_status.dart';
 import '../../core/fullscreen/fullscreen_ad_controller.dart';
@@ -93,7 +95,7 @@ class RewardManager implements AdManager {
     _status = result.isSuccess ? AdLoadStatus.idle : AdLoadStatus.failed;
 
     if (result.isSuccess && preloadAfterShow) {
-      await load();
+      unawaited(load());
     }
 
     return result;
