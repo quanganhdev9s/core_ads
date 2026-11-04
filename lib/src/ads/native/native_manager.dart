@@ -21,6 +21,7 @@ class NativeManager implements AdManager {
 
   AdLoadStatus _status = AdLoadStatus.idle;
   Future<AdResult<void>>? _loadFuture;
+  bool _disposed = false;
 
   @override
   AdLoadStatus get status => _status;
@@ -33,6 +34,11 @@ class NativeManager implements AdManager {
 
   @override
   Future<AdResult<void>> load() async {
+    if (_disposed) {
+      return const AdResult.failure(
+        AdFailure(code: 'load_cancelled', message: 'Native ad load cancelled'),
+      );
+    }
     if (!consentManager.canRequestAds) {
       _status = AdLoadStatus.failed;
       return const AdResult.failure(AdFailure.consentDenied());
@@ -62,6 +68,11 @@ class NativeManager implements AdManager {
   Future<AdResult<void>> _load() async {
     _status = AdLoadStatus.loading;
     final result = await service.load(placement);
+    if (_disposed) {
+      return const AdResult.failure(
+        AdFailure(code: 'load_cancelled', message: 'Native ad load cancelled'),
+      );
+    }
     _status = result.isSuccess ? AdLoadStatus.ready : AdLoadStatus.failed;
 
     return result;
@@ -69,6 +80,7 @@ class NativeManager implements AdManager {
 
   @override
   Future<void> dispose() async {
+    _disposed = true;
     _loadFuture = null;
     _status = AdLoadStatus.idle;
   }

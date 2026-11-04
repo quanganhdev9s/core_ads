@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Lightweight internal logger for ads diagnostics.
 class AdsLogger {
   /// Creates a logger.
@@ -15,8 +13,6 @@ class AdsLogger {
     }
 
     // ignore: avoid_print
-    if (kDebugMode) {
-      print('[App Ads] $message');
-    }
+    print('[App Ads] $message');
   }
 }

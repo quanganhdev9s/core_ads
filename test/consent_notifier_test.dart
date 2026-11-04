@@ -1,5 +1,6 @@
 import 'package:core_ads/core_ads.dart';
 import 'package:core_ads/src/consent/consent_manager.dart';
+import 'package:core_ads/src/core/events/ads_consent_event.dart';
 import 'package:core_ads/src/data/repositories/ads_repository_impl.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';

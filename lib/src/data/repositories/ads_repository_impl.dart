@@ -91,6 +91,7 @@ class AdsRepositoryImpl implements AdsRepository {
   }) async {
     AdsLoadNotifier.instance.notify(placement, AdLoadStatus.loading);
 
+    NativeManager? nativeManager;
     final result = await switch (placement.type) {
       AdType.banner => _bannerManager(placement).load(config: bannerConfig),
       AdType.interstitial => _interstitialManager(placement).load(),
@@ -98,9 +99,16 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.rewardedInterstitial => _rewardedInterstitialManager(
         placement,
       ).load(),
-      AdType.native => _nativeManager(placement).load(),
+      AdType.native => (nativeManager = _nativeManager(placement)).load(),
       AdType.appOpen => _appOpenManager(placement).load(),
     };
+
+    if (nativeManager != null &&
+        !identical(nativeManager, _nativeManagers[placement])) {
+      return const AdResult.failure(
+        AdFailure(code: 'load_cancelled', message: 'Native ad load cancelled'),
+      );
+    }
 
     switch (result) {
       case AdSuccess<void>():
@@ -131,6 +139,16 @@ class AdsRepositoryImpl implements AdsRepository {
       AdType.appOpen =>
         _appOpenManagers[placement]?.status ?? AdLoadStatus.idle,
     };
+  }
+
+  @override
+  bool canAttemptShow(AdPlacement placement) {
+    if (placement.type == AdType.banner || placement.type == AdType.native) {
+      return false;
+    }
+    return consentManager.canRequestAds &&
+        !fullscreenAdController.isShowing &&
+        fullscreenAdController.canShow(placement).isSuccess;
   }
 
   @override
@@ -240,7 +258,11 @@ class AdsRepositoryImpl implements AdsRepository {
       case AdType.appOpen:
         await _appOpenManagers.remove(placement)?.dispose();
       case AdType.native:
-        await _nativeManagers.remove(placement)?.dispose();
+        final manager = _nativeManagers.remove(placement);
+        final clearing = service.clear(placement);
+        await manager?.dispose();
+        await clearing;
+        return;
     }
 
     await service.clear(placement);

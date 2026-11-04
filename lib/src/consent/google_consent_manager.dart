@@ -11,6 +11,12 @@ import 'app_tracking_transparency_manager.dart';
 import 'consent_manager.dart';
 
 /// Google UMP implementation of [ConsentManager].
+///
+/// The messages themselves live in the AdMob UI (Privacy & messaging). When a
+/// GDPR message and an ATT message are both published for the app, the UMP SDK
+/// presents the GDPR message first and the ATT alert second — the order Google
+/// recommends — during [ConsentForm.loadAndShowConsentFormIfRequired]. The app
+/// must not request ATT before that call, or the ATT message is skipped.
 class GoogleConsentManager extends ConsentManager {
   /// Creates a Google consent manager.
   GoogleConsentManager({
@@ -20,6 +26,9 @@ class GoogleConsentManager extends ConsentManager {
            const AppTrackingTransparencyManager();
 
   /// Handles iOS App Tracking Transparency requests.
+  ///
+  /// Only used by [AdsTrackingAuthorizationMode.umpWithFallback]; the default
+  /// mode leaves ATT to the UMP SDK.
   final AppTrackingTransparencyManager trackingTransparencyManager;
 
   AdsLogger _logger = const AdsLogger(enabled: false);
@@ -49,8 +58,13 @@ class GoogleConsentManager extends ConsentManager {
         return umpResult;
       }
 
+      await _logConsentState();
+
       final formError = await _loadAndShowConsentFormIfRequired();
       if (formError != null) {
+        _logger.log(
+          'Consent form failed: ${formError.errorCode} ${formError.message}',
+        );
         final canRequest = await ConsentInformation.instance.canRequestAds();
         updateCanRequestAds(canRequest);
 
@@ -70,6 +84,9 @@ class GoogleConsentManager extends ConsentManager {
         _logConsentResult(result, canRequestAds: canRequest);
         return result;
       }
+
+      _logger.log('Consent form flow completed');
+      await _logConsentState();
 
       final canRequest = await ConsentInformation.instance.canRequestAds();
       updateCanRequestAds(canRequest);
@@ -92,6 +109,54 @@ class GoogleConsentManager extends ConsentManager {
     }
   }
 
+  /// Whether the app must expose a privacy options entry point.
+  ///
+  /// Required by the AdMob UI when a GDPR message is published, so the user can
+  /// reopen the message and change their choice.
+  static Future<bool> isPrivacyOptionsRequired() async {
+    final status = await ConsentInformation.instance
+        .getPrivacyOptionsRequirementStatus();
+    return status == PrivacyOptionsRequirementStatus.required;
+  }
+
+  /// Presents the privacy options form configured in the AdMob UI.
+  static Future<AdResult<void>> showPrivacyOptionsForm() {
+    final completer = Completer<AdResult<void>>();
+
+    ConsentForm.showPrivacyOptionsForm((formError) {
+      if (completer.isCompleted) return;
+      if (formError == null) {
+        completer.complete(const AdResult.success(null));
+        return;
+      }
+      completer.complete(
+        AdResult.failure(
+          AdFailure(
+            code: 'privacy_options_form_error',
+            message: formError.message,
+            cause: formError,
+          ),
+        ),
+      );
+    });
+
+    return completer.future;
+  }
+
+  Future<void> _logConsentState() async {
+    if (!_logger.enabled) return;
+
+    final status = await ConsentInformation.instance.getConsentStatus();
+    final formAvailable = await ConsentInformation.instance
+        .isConsentFormAvailable();
+    final privacyOptions = await ConsentInformation.instance
+        .getPrivacyOptionsRequirementStatus();
+    _logger.log(
+      'Consent state status=$status formAvailable=$formAvailable '
+      'privacyOptions=$privacyOptions',
+    );
+  }
+
   void _logConsentResult(AdResult<void> result, {required bool canRequestAds}) {
     switch (result) {
       case AdSuccess<void>():
@@ -100,7 +165,8 @@ class GoogleConsentManager extends ConsentManager {
         );
       case AdFailed<void>(failure: final failure):
         _logger.log(
-          'Consent final canRequestAds=$canRequestAds, result=failed ${failure.code}',
+          'Consent final canRequestAds=$canRequestAds, '
+          'result=failed ${failure.code} ${failure.message}',
         );
     }
   }
@@ -137,7 +203,9 @@ class GoogleConsentManager extends ConsentManager {
       },
       (error) {
         if (!completer.isCompleted) {
-          _logger.log('UMP request completed: failed ${error.errorCode}');
+          _logger.log(
+            'UMP request completed: failed ${error.errorCode} ${error.message}',
+          );
           completer.complete(
             AdResult.failure(
               AdFailure(
@@ -154,6 +222,10 @@ class GoogleConsentManager extends ConsentManager {
     return completer.future;
   }
 
+  /// Loads and shows every message the AdMob UI has for this user.
+  ///
+  /// On iOS this covers the ATT message too, so the SDK owns the GDPR-then-ATT
+  /// order and the app never prompts for ATT itself.
   Future<FormError?> _loadAndShowConsentFormIfRequired() {
     final completer = Completer<FormError?>();
 
@@ -167,16 +239,20 @@ class GoogleConsentManager extends ConsentManager {
   }
 
   ConsentDebugSettings? _debugSettings(AdsConsentConfig config) {
+    final testDeviceIds = config.resolvedTestDeviceIds;
     if (config.debugGeography == AdsConsentDebugGeography.disabled &&
-        config.testDeviceIds.isEmpty) {
+        testDeviceIds.isEmpty) {
       return null;
     }
 
+    _logger.log(
+      'UMP debug settings geography=${config.debugGeography.name} '
+      'testDeviceIds=${testDeviceIds.length}',
+    );
+
     return ConsentDebugSettings(
       debugGeography: _debugGeography(config.debugGeography),
-      testIdentifiers: config.testDeviceIds.isEmpty
-          ? null
-          : config.testDeviceIds,
+      testIdentifiers: testDeviceIds.isEmpty ? null : testDeviceIds,
     );
   }
 

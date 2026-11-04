@@ -21,6 +21,9 @@ abstract interface class AdsRepository {
   /// Returns current load/cache status for [placement].
   AdLoadStatus getStatus(AdPlacement placement);
 
+  /// Checks consent, fullscreen locks and cooldowns without requiring a loaded ad.
+  bool canAttemptShow(AdPlacement placement);
+
   /// Returns whether [placement] currently has a showable fullscreen ad.
   bool canShow(AdPlacement placement);
 

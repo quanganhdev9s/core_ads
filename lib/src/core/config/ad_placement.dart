@@ -9,7 +9,7 @@ final class AdPlacement {
   const AdPlacement({
     required this.key,
     required this.type,
-    this.preloadAfterShow = true,
+    this.preloadAfterShow = false,
     this.nativeFactoryId,
   });
 

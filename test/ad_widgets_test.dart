@@ -164,6 +164,9 @@ class _FakeAdsRepository implements AdsRepository {
   AdLoadStatus getStatus(AdPlacement placement) => AdLoadStatus.ready;
 
   @override
+  bool canAttemptShow(AdPlacement placement) => false;
+
+  @override
   bool canShow(AdPlacement placement) => false;
 
   @override

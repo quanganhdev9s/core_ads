@@ -9,13 +9,11 @@ export 'src/core/enums/ad_load_status.dart';
 export 'src/core/enums/ad_network.dart';
 export 'src/core/enums/ad_type.dart';
 export 'src/core/events/ads_callbacks.dart';
-export 'src/core/events/ads_consent_event.dart';
 export 'src/core/events/ads_event.dart';
 export 'src/core/events/ads_failure_event.dart';
 export 'src/core/events/ads_load_event.dart';
 export 'src/core/events/ads_paid_event.dart';
 export 'src/core/events/ads_reward_event.dart';
-export 'src/core/consent/ads_consent_notifier.dart' show AdsConsentListener;
 export 'src/core/load/ads_load_notifier.dart' show AdsLoadListener;
 export 'src/core/fullscreen/fullscreen_ad_cooldown_config.dart';
 export 'src/core/results/ad_failure.dart';
@@ -29,3 +27,10 @@ export 'src/ads/banner/ads_banner.dart';
 export 'src/ads/native/ads_collapsible_native.dart';
 export 'src/ads/native/ads_native.dart';
 export 'src/widgets/ads_loading_widget.dart';
+
+// AdMob's own foreground/background signal, for callers driving App Open ads.
+// Unlike [WidgetsBindingObserver] it fires only on a real process
+// background/foreground trip, so a status-bar pull or a fullscreen ad taking
+// over the Flutter view does not read as a resume.
+export 'package:google_mobile_ads/google_mobile_ads.dart'
+    show AppState, AppStateEventNotifier;

@@ -160,6 +160,46 @@ void main() {
     },
   );
 
+  test(
+    'show eligibility checks consent, lock and cooldown without loading',
+    () {
+      var now = _now;
+      final controller = FullscreenAdController(now: () => now);
+      final consent = ConsentManager();
+      final service = _FakeAdsService();
+      final repository = AdsRepositoryImpl(
+        config: _config(
+          fullscreenCooldown: const FullscreenAdCooldownConfig(
+            interstitialInterval: Duration(seconds: 7),
+            interstitialAppOpenInterval: Duration(seconds: 3),
+          ),
+        ),
+        service: service,
+        consentManager: consent,
+        fullscreenAdController: controller,
+      );
+      expect(repository.getStatus(_interstitial), AdLoadStatus.idle);
+      expect(repository.canShow(_interstitial), isFalse);
+      expect(repository.canAttemptShow(_interstitial), isTrue);
+      controller.markShown(_interstitial);
+      expect(repository.canAttemptShow(_interstitial), isFalse);
+      now = now.add(const Duration(seconds: 7));
+      expect(repository.canAttemptShow(_interstitial), isTrue);
+      controller.markShown(_appOpen);
+      expect(repository.canAttemptShow(_interstitial), isFalse);
+      now = now.add(const Duration(seconds: 3));
+      expect(repository.canAttemptShow(_interstitial), isTrue);
+      controller.tryAcquire(_rewarded);
+      expect(repository.canAttemptShow(_interstitial), isFalse);
+      controller.release(_rewarded);
+      consent.updateCanRequestAds(false);
+      expect(repository.canAttemptShow(_interstitial), isFalse);
+      consent.updateCanRequestAds(true);
+      expect(repository.canAttemptShow(_interstitial), isTrue);
+      expect(service.loadCount, 0);
+    },
+  );
+
   test('interstitial show does not wait for preload after show', () async {
     final preloadCompleter = Completer<AdResult<void>>();
     final service = _FakeAdsService(

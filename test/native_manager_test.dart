@@ -30,6 +30,22 @@ void main() {
     expect(service.loadCount, 1);
     expect(manager.status, AdLoadStatus.ready);
   });
+
+  test('dispose leaves a pending native load cancelled and idle', () async {
+    final completer = Completer<AdResult<void>>();
+    final manager = NativeManager(
+      service: _FakeAdsService(loadCompleter: completer),
+      consentManager: ConsentManager(),
+      placement: placement,
+    );
+    final pending = manager.load();
+    await manager.dispose();
+    completer.complete(const AdResult.success(null));
+    final result = await pending;
+    expect(result, isA<AdFailed<void>>());
+    expect((result as AdFailed<void>).failure.code, 'load_cancelled');
+    expect(manager.status, AdLoadStatus.idle);
+  });
 }
 
 class _FakeAdsService implements AdsService {

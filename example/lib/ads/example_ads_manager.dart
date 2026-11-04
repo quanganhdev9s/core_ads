@@ -176,7 +176,9 @@ class ExampleAdsManager extends ChangeNotifier {
       }),
       consent: const AdsConsentConfig(
         enabled: true,
-        requestTrackingAuthorizationOnIos: true,
+        // GDPR message first, ATT second, both presented by the UMP SDK from
+        // the messages published in the AdMob UI.
+        trackingAuthorizationMode: AdsTrackingAuthorizationMode.ump,
         testDeviceIds: ['B3EEABB8EE11C2BE770B684D95219ECB'],
       ),
       callbacks: _wrapCallbacks(callbacks),

@@ -62,6 +62,7 @@ void main() {
 
   test('canShow returns false before initialize', () {
     expect(CoreAds.canShow(_placement), isFalse);
+    expect(CoreAds.canAttemptShow(_placement), isFalse);
   });
 
   test('canShow delegates to active repository', () async {
@@ -70,6 +71,14 @@ void main() {
     await CoreAds.initialize(_config(), repository: repository);
 
     expect(CoreAds.canShow(_placement), isTrue);
+  });
+
+  test('canAttemptShow delegates without requiring readiness', () async {
+    final repository = _FakeAdsRepository(canAttemptShowResult: true);
+    await CoreAds.initialize(_config(), repository: repository);
+    expect(CoreAds.canAttemptShow(_placement), isTrue);
+    expect(CoreAds.canShow(_placement), isFalse);
+    expect(repository.loadCount, 0);
   });
 
   test('updateFullscreenCooldown delegates to active repository', () async {
@@ -101,10 +110,12 @@ class _FakeAdsRepository implements AdsRepository {
   _FakeAdsRepository({
     this.initializeResult = const AdResult.success(null),
     this.canShowResult = false,
+    this.canAttemptShowResult = false,
   });
 
   final AdResult<void> initializeResult;
   final bool canShowResult;
+  final bool canAttemptShowResult;
 
   int initializeCount = 0;
   int loadCount = 0;
@@ -128,6 +139,9 @@ class _FakeAdsRepository implements AdsRepository {
 
   @override
   AdLoadStatus getStatus(AdPlacement placement) => AdLoadStatus.idle;
+
+  @override
+  bool canAttemptShow(AdPlacement placement) => canAttemptShowResult;
 
   @override
   bool canShow(AdPlacement placement) => canShowResult;

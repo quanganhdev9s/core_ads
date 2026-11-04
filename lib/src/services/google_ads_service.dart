@@ -35,6 +35,12 @@ class GoogleAdsService implements AdsService {
   final Map<AdPlacement, RewardedInterstitialAd> _rewardedInterstitialAds = {};
   final Map<AdPlacement, AppOpenAd> _appOpenAds = {};
   final Map<AdPlacement, NativeAd> _nativeAds = {};
+  final Map<AdPlacement, Object> _nativeRequests = {};
+
+  static const _nativeLoadCancelled = AdFailure(
+    code: 'load_cancelled',
+    message: 'Native ad load cancelled',
+  );
 
   AdRequest get _request => adRequest ?? const AdRequest();
 
@@ -283,6 +289,7 @@ class GoogleAdsService implements AdsService {
       case AdType.rewardedInterstitial:
         _rewardedInterstitialAds.remove(placement)?.dispose();
       case AdType.native:
+        _nativeRequests.remove(placement);
         _nativeAds.remove(placement)?.dispose();
       case AdType.appOpen:
         _appOpenAds.remove(placement)?.dispose();
@@ -301,6 +308,7 @@ class GoogleAdsService implements AdsService {
       case AdType.rewardedInterstitial:
         _disposeAll(_rewardedInterstitialAds);
       case AdType.native:
+        _nativeRequests.clear();
         _disposeAll(_nativeAds);
       case AdType.appOpen:
         _disposeAll(_appOpenAds);
@@ -411,15 +419,20 @@ class GoogleAdsService implements AdsService {
       );
     }
 
+    final request = Object();
+    _nativeRequests[placement] = request;
     _nativeAds.remove(placement)?.dispose();
     return _loadWaterfall(
       placement: placement,
       adUnitIds: adUnitIds,
-      load: (adUnitId) => _loadNativeWithAdUnitId(
-        placement,
-        adUnitId: adUnitId,
-        factoryId: factoryId,
-      ),
+      load: (adUnitId) => identical(_nativeRequests[placement], request)
+          ? _loadNativeWithAdUnitId(
+              placement,
+              adUnitId: adUnitId,
+              factoryId: factoryId,
+              request: request,
+            )
+          : Future.value(const AdResult.failure(_nativeLoadCancelled)),
     );
   }
 
@@ -427,6 +440,7 @@ class GoogleAdsService implements AdsService {
     AdPlacement placement, {
     required String adUnitId,
     required String factoryId,
+    required Object request,
   }) async {
     final completer = Completer<AdResult<void>>();
 
@@ -436,6 +450,14 @@ class GoogleAdsService implements AdsService {
       request: _request,
       listener: NativeAdListener(
         onAdLoaded: (ad) {
+          if (!identical(_nativeRequests[placement], request)) {
+            ad.dispose();
+            _completeLoad(
+              completer,
+              const AdResult.failure(_nativeLoadCancelled),
+            );
+            return;
+          }
           _nativeAds[placement] = ad as NativeAd;
           _logger.log('${placement.key} native loaded');
           _emitLoaded(placement);
@@ -443,6 +465,13 @@ class GoogleAdsService implements AdsService {
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
+          if (!identical(_nativeRequests[placement], request)) {
+            _completeLoad(
+              completer,
+              const AdResult.failure(_nativeLoadCancelled),
+            );
+            return;
+          }
           _nativeAds.remove(placement);
           final failure = _mapAdError(error);
           _completeLoad(completer, AdResult.failure(failure));
@@ -456,9 +485,12 @@ class GoogleAdsService implements AdsService {
 
     try {
       await nativeAd.load();
-      return completer.future;
+      return await completer.future;
     } catch (error) {
       nativeAd.dispose();
+      if (!identical(_nativeRequests[placement], request)) {
+        return const AdResult.failure(_nativeLoadCancelled);
+      }
       _nativeAds.remove(placement);
       return AdResult.failure(_mapNativeLoadException(error));
     }
@@ -970,6 +1002,7 @@ class GoogleAdsService implements AdsService {
 
   @override
   Future<void> dispose() async {
+    _nativeRequests.clear();
     for (final ad in _bannerAds.values) {
       ad.dispose();
     }

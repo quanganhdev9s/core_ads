@@ -45,6 +45,18 @@ class CoreAds {
     AdsConsentNotifier.instance.removeListener(listener);
   }
 
+  /// Whether the app must show an entry point to the privacy options form.
+  ///
+  /// True once a user has seen a GDPR message that allows changing the choice
+  /// later. Use it to show or hide a settings row that calls
+  /// [showPrivacyOptionsForm].
+  static Future<bool> isPrivacyOptionsRequired() =>
+      GoogleConsentManager.isPrivacyOptionsRequired();
+
+  /// Reopens the privacy options form configured in the AdMob UI.
+  static Future<AdResult<void>> showPrivacyOptionsForm() =>
+      GoogleConsentManager.showPrivacyOptionsForm();
+
   /// Initializes the ads package.
   ///
   /// A custom [repository] can be provided by advanced integrations. Most apps
@@ -170,6 +182,11 @@ class CoreAds {
   /// Returns current load/cache status for [placement].
   static AdLoadStatus getStatus(AdPlacement placement) {
     return _repository?.getStatus(placement) ?? AdLoadStatus.idle;
+  }
+
+  /// Checks whether a fullscreen show attempt is allowed, independent of load status.
+  static bool canAttemptShow(AdPlacement placement) {
+    return _repository?.canAttemptShow(placement) ?? false;
   }
 
   /// Returns whether [placement] currently has a showable fullscreen ad.
