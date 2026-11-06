@@ -423,10 +423,9 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
           if (_adsInitialized)
             AdsNative(
               placement: ExamplePlacements.native,
-              height: 260,
-              loading: const AdsLoadingWidget(height: 260),
+              height: 136,
               error: const SizedBox(
-                height: 260,
+                height: 136,
                 child: Center(child: Text('Native ad failed to load')),
               ),
               showRetryButton: true,
@@ -434,7 +433,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               onFailed: _onNativeFailed,
             )
           else
-            const AdsLoadingWidget(height: 260),
+            const NativeAdShimmer(factoryId: 'Small1', height: 136),
           const SizedBox(height: 24),
           const Text('Collapsible native'),
           const SizedBox(height: 8),
@@ -443,11 +442,10 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               nativePlacement: ExamplePlacements.collapsibleNative,
               bannerPlacement: ExamplePlacements.collapsedBanner,
               expanded: _collapsibleNativeExpanded,
-              nativeHeight: 260,
+              nativeHeight: 364,
               bannerConfig: ExampleAdConfigs.collapsedBanner,
-              nativeLoading: const AdsLoadingWidget(height: 260),
               nativeError: const SizedBox(
-                height: 260,
+                height: 364,
                 child: Center(child: Text('Collapsible native failed to load')),
               ),
               bannerBackgroundColor: Colors.black,
@@ -464,7 +462,7 @@ class _AdsExamplePageState extends State<AdsExamplePage> {
               },
             )
           else
-            const AdsLoadingWidget(height: 260),
+            const NativeAdShimmer(factoryId: 'Collap1Expanded', height: 364),
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: _openSecondPage,

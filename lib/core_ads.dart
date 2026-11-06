@@ -25,7 +25,17 @@ export 'src/app_ads.dart';
 export 'src/ads/app_open/ads_app_lifecycle_observer.dart';
 export 'src/ads/banner/ads_banner.dart';
 export 'src/ads/native/ads_collapsible_native.dart';
+export 'src/ads/native/ads_full_screen_native.dart';
 export 'src/ads/native/ads_native.dart';
+export 'src/ads/native/ads_language_start_native.dart';
+export 'src/ads/native/native_ad_shimmer.dart';
+export 'src/ads/native/native_ad_type.dart';
+export 'src/ads/native/native_ad_template.dart';
+export 'src/script/ad_script.dart';
+export 'src/script/ad_scenario_coordinator.dart';
+export 'src/script/ad_scenario_controller.dart';
+export 'src/script/ad_scenario_keys.dart';
+export 'src/widgets/core_ad_slot.dart';
 export 'src/widgets/ads_loading_widget.dart';
 
 // AdMob's own foreground/background signal, for callers driving App Open ads.

@@ -19,6 +19,7 @@ class FullscreenAdController {
 
   AdPlacement? _activePlacement;
   DateTime? _lastInterstitialShownAt;
+  DateTime? _lastCountedInterstitialShownAt;
   DateTime? _lastAppOpenShownAt;
 
   /// Placement currently holding the fullscreen lock.
@@ -35,7 +36,7 @@ class FullscreenAdController {
   /// Checks whether [placement] can show according to cooldown rules.
   AdResult<void> canShow(AdPlacement placement) {
     return switch (placement.type) {
-      AdType.interstitial => _canShowInterstitial(),
+      AdType.interstitial => _canShowInterstitial(placement),
       AdType.appOpen => _canShowAppOpen(),
       _ => const AdResult.success(null),
     };
@@ -69,6 +70,11 @@ class FullscreenAdController {
     switch (placement.type) {
       case AdType.interstitial:
         _lastInterstitialShownAt = _now();
+        if (!cooldown.ignoredInterstitialPlacementKeys.contains(
+          placement.key,
+        )) {
+          _lastCountedInterstitialShownAt = _lastInterstitialShownAt;
+        }
       case AdType.appOpen:
         _lastAppOpenShownAt = _now();
       case AdType.banner:
@@ -83,18 +89,21 @@ class FullscreenAdController {
   void reset() {
     _activePlacement = null;
     _lastInterstitialShownAt = null;
+    _lastCountedInterstitialShownAt = null;
     _lastAppOpenShownAt = null;
   }
 
-  AdResult<void> _canShowInterstitial() {
-    final interstitialResult = _checkCooldown(
-      lastShownAt: _lastInterstitialShownAt,
-      interval: cooldown.interstitialInterval,
-      code: 'interstitial_cooldown_active',
-      message: 'Interstitial cooldown is still active.',
-    );
-    if (interstitialResult.isFailure) {
-      return interstitialResult;
+  AdResult<void> _canShowInterstitial(AdPlacement placement) {
+    if (!cooldown.ignoredInterstitialPlacementKeys.contains(placement.key)) {
+      final interstitialResult = _checkCooldown(
+        lastShownAt: _lastCountedInterstitialShownAt,
+        interval: cooldown.interstitialInterval,
+        code: 'interstitial_cooldown_active',
+        message: 'Interstitial cooldown is still active.',
+      );
+      if (interstitialResult.isFailure) {
+        return interstitialResult;
+      }
     }
 
     return _checkCooldown(

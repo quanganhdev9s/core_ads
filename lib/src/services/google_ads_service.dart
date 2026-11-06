@@ -16,6 +16,7 @@ import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../ads/banner/banner_ad_config.dart';
+import '../ads/native/native_ad_type.dart';
 import 'ads_service.dart';
 
 /// Google Mobile Ads implementation of [AdsService].
@@ -447,6 +448,11 @@ class GoogleAdsService implements AdsService {
     final nativeAd = NativeAd(
       adUnitId: adUnitId,
       factoryId: factoryId,
+      customOptions:
+          factoryId == NativeAdType.languageStart1.factoryId ||
+              factoryId == NativeAdType.languageStart2.factoryId
+          ? <String, Object>{'placementKey': placement.key}
+          : null,
       request: _request,
       listener: NativeAdListener(
         onAdLoaded: (ad) {

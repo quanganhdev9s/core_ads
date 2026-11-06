@@ -28,7 +28,7 @@ class AppAdPlacements {
   static const articleNative = AdPlacement(
     key: 'article_native',
     type: AdType.native,
-    nativeFactoryId: 'article_native_factory',
+    nativeFactoryId: 'Small1',
   );
 
   static const levelCompleteInterstitial = AdPlacement(
@@ -140,6 +140,131 @@ iOS `ios/Runner/Info.plist`:
 Use Google's sample app IDs only in test apps. Production builds should use the
 real app IDs from AdMob.
 
+## Remote Config ad script
+
+The host app fetches and activates Firebase Remote Config, then passes the JSON
+value (for example, `ad_script_100`) to the package. `core_ads` does not own a
+Firebase project or fetch interval.
+
+```dart
+final ads = AdScenarioController(
+  initialScript: AdScript.parse(bundledFallbackJson),
+  resolveAdUnitIds: (name, type) => appAdUnitIds[name] ?? const [],
+  buildAdsConfig: (ids) => AdsConfig(
+    environment: AdsEnvironment.production,
+    adUnitIds: ids,
+  ),
+);
+await ads.applyRemoteJson(remoteConfigJson); // Keeps fallback on parse failure.
+await ads.initialize();
+
+// At a screen's inline ad location:
+CoreAdSlot(controller: ads, placementKey: 'banner_home');
+
+// At the app-defined moment for a full-screen scenario:
+final result = await ads.showScenario(context, 'inter_home');
+// Continue product navigation after the ad sequence finishes.
+```
+
+Each scenario step maps to an existing single-format `AdPlacement`. A `native_*`
+placement with multiple numbered native branches uses each digit of `enable`
+to select a branch: `native_intro.enable = 24` selects intro 2 and 4. A
+special rule for `native_language` and `native_get_start` accepts only `0`, `1`,
+or `2`; every other value disables the placement (see the note linked below). `native_intro`
+accepts only screen numbers 1–4. `native_full_onboarding.enable` selects the
+1-based onboarding transition that opens a full-screen native ad. A
+placement with one unnumbered native branch accepts only `0` (off) or `1` (on). The package keeps
+`collap_config` as slash-separated collapse-button tap numbers, and associates `refresh_rate`
+with the native branch. `on_resume` can be read from `settings.on_resume` when
+there is no placement object; a placement object takes precedence if present.
+Other placement families do not interpret `enable` as a string of digits;
+without a documented scenario rule, they accept `1` with exactly one ad branch.
+`AdScriptPlacement` validates `enable` and stores the selected branches once;
+`AdScenarioCoordinator` uses that list to build the ad steps.
+`settings.ads_enable` is retained but does not change placements yet, because
+that scenario belongs to each app.
+
+For all `native_*` enable cases, see the
+[Vietnamese implementation note](NATIVE_AD_CASES.md).
+
+`CoreAdSlot` chooses the inline format from `enable` and rebuilds after a
+successful script update. For `banner_*`: 0 hides; 1 shows banner; 2 shows a
+large native that collapses to `banner_collap`; 3 shows native; 4 shows a large
+native that collapses to a small native. Mode 4 uses the same `native` ID for
+two separate native placements, with `Big4` and `Small1` factories by default.
+The app can supply other default factory IDs to `AdScenarioController`. If
+`native_template` names `Collap1Expanded`, `Collap2Expanded`, or
+`Collap3Expanded`, the package pairs it with the matching `Collapsed` factory.
+An ordinary native template such as `Small1` stays a normal native even when
+its JSON contains `collap_config`. The `native_inter` branch defaults to
+`Full1` when its template is omitted.
+
+The slot takes its default native height from the selected factory. Pass
+`nativeHeight` or `collapsedNativeHeight` only when the screen needs an
+override. Native loading uses a template-shaped shimmer: compact icon and CTA
+for Tiny, icon and text for Small, media and CTA for Big, a full-height media
+area for Full, and separate expanded/compact shapes for Collap.
+
+`showScenario` loads and shows a selected interstitial or app-open ad, then
+opens the package's full-screen native route when selected. It opens that native
+route even when the preceding full-screen ad is skipped or unavailable. The
+app chooses when to call it and where to navigate after it returns. `refresh_rate`
+in `inter_home` applies to `NATIVE_INTER_HOME`, not `INTER_HOME`.
+
+`step_count` gates calls to the scenario's interstitial step separately for
+each interstitial placement. With `step_count: 2`, calls 1 and 3 return
+`AdFailed` with code `step_count_skipped`; calls 2 and 4 attempt to show the
+ad and return its actual result. `preload` does not increment the count.
+The controller preserves counts across successful script updates. The native
+step remains available in the plan even when an inter
+call is skipped. Calls to the lower-level `CoreAds.showInterstitial` API do not
+use this script counter.
+
+The close button appears `wait_time` milliseconds after the first native ad is
+rendered. The widget reloads the native ad `refresh_rate` milliseconds after each
+render while the route is current and the app is resumed. A failed first load
+shows the close button immediately. The app decides when to push the route and
+where to navigate after it closes.
+
+`CoreAdSlot` also applies `refresh_rate` to an inline native ad while its route
+is current and the app is resumed. The interval starts after each successful
+render. For a collapsible ad, it applies to the expanded native view.
+
+Remote Config time values use milliseconds throughout. For example,
+`"refresh_rate": 2000` means 2 seconds and `"wait_time": 5000` means 5 seconds.
+The app-owned `language_delay_millis` and `introN_setup` `delay` values use the
+same unit. `settings.inter_delay_time` is parsed as
+`time=<milliseconds>,ignore=<scenario-key>|<scenario-key>`. When present,
+`AdScenarioController` passes `time` to the existing fullscreen interstitial
+cooldown. Ignored interstitials bypass that inter-to-inter gap and do not reset
+its timer; they still obey the separate interstitial-to-app-open cooldown.
+For example, `ignore=ads_splash|inter_language` matches the script's logical
+keys, not ad unit names. If the setting is absent, the app's `AdsConfig`
+fullscreen cooldown remains in effect. The gap is checked when showing an ad,
+and a successful show starts the timer after the interstitial closes.
+
+Google [recommends ads persist for at least 60 seconds](https://support.google.com/admob/answer/2936217?hl=en)
+and warns that faster refresh can reduce fill. Review a Remote Config value such
+as `refresh_rate: 2000` before using it with live ad units.
+
+The host app fetches Remote Config and supplies the mapping from symbolic names
+like `INTER_HOME` to platform-specific ad unit IDs. `applyRemoteJson` parses a
+new script and, after initialization, reinitializes `CoreAds` with its new ID
+map before notifying slots. Call it at a safe point when no ad is on screen;
+if the whole JSON cannot be parsed, the previous script and ID map remain
+active. The app should
+dispose the controller and `CoreAds` at its chosen lifetime boundary.
+
+An enabled `ads_splash`, `inter_*`, `banner_*`, or `native_*` placement must
+contain every branch selected by its `enable` value. If one placement has an
+invalid `enable`, timing value, or selected branch, the package prints a prominent
+`[CORE_ADS][REMOTE_CONFIG_ERROR]` message and disables only that placement.
+Other ads in the same JSON remain available. A malformed known setting is
+ignored with a log. Missing placement keys resolve to a disabled plan, so ad
+widgets and scenario calls do not interrupt product navigation. The lower
+level `AdScriptStore` is still available for manual integration.
+`settings.ads_enable` is retained but does not currently change placements.
+
 ## Public API
 
 ```dart
@@ -232,6 +357,10 @@ This avoids reusing one `BannerAd` object in multiple `AdWidget`s.
 
 Native ads require a platform factory. The `nativeFactoryId` in `AdPlacement`
 must match the factory registered on Android and iOS.
+The package supplies the Tiny, Small, Big, Full, and Collap factory families,
+plus `Card1`, on Android and iOS. Apps may still register their own factory IDs.
+`AdsNative` and `AdsCollapsibleNative` show the matching `NativeAdShimmer` while
+loading unless the app supplies a custom loading widget.
 
 1. Configure native in Dart:
 
@@ -240,7 +369,7 @@ class AppAdPlacements {
   static const articleNative = AdPlacement(
     key: 'article_native',
     type: AdType.native,
-    nativeFactoryId: 'article_native_factory',
+    nativeFactoryId: 'Small1',
   );
 }
 
@@ -254,22 +383,69 @@ AdsConfig(
 2. Register the factory on Android:
 
 ```kotlin
-GoogleMobileAdsPlugin.registerNativeAdFactory(
-    flutterEngine,
-    "article_native_factory",
-    ArticleNativeAdFactory(this),
-)
+CoreAdsNativeFactories.register(flutterEngine, this)
 ```
+
+Android factory IDs follow the [WaveZ native ad design](https://www.figma.com/design/bMsTcAN9Uk50hlbcdW3LIA/Untitled?node-id=183-78):
+
+| Layout | Factory IDs | Flutter default height |
+| --- | --- | --- |
+| Tiny | `Tiny1`, `Tiny2` | 80dp, 74dp |
+| Small | `Small1`–`Small5` | 136dp, 138dp, 136dp, 130dp, 136dp |
+| Big | `Big1`–`Big6`; `Big7`–`Big8`; `Big9` | 36%; 33%; 30% of screen height |
+| Full | `Full1`–`Full5` | Fill the host height |
+| Collapsible | `Collap1Expanded`/`Collapsed`; `Collap2Expanded`/`Collapsed`; `Collap3Expanded`/`Collapsed` | 36%/Tiny1; 40%/Tiny2; 33%/Tiny1 |
+| Card | `Card1` | 240dp |
+
+The public `NativeAdType` enum keeps each factory ID and its Flutter height
+rule in one place. For example, `NativeAdType.big4.factoryId` is `Big4`, and
+`NativeAdType.big4.resolveHeight(screenHeight)` returns 36% on Android and
+39% on iOS. `CoreAdSlot` and `NativeAdTemplate.heightForScreen` select the
+current platform automatically.
+`CoreAdSlot` uses `MediaQuery.sizeOf(context).height` for this calculation.
+Full-screen types return `null`; their host provides the available height.
+
+`Small5` remains registered as an alias of `Small3` for existing placements. For collapsible and full-screen layouts, the Flutter widget owns the close or next navigation action. The Android factory renders the ad content; apps should supply an appropriately sized host for each layout.
 
 3. Register the factory on iOS:
 
 ```swift
-FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
-  registry,
-  factoryId: "article_native_factory",
-  nativeAdFactory: ArticleNativeAdFactory()
-)
+extension CoreAdsNativeFactory: FLTNativeAdFactory {}
+for id in CoreAdsNativeFactories.ids {
+  FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
+    registry,
+    factoryId: id,
+    nativeAdFactory: CoreAdsNativeFactory(template: id)
+  )
+}
 ```
+
+iOS provides the same factory IDs, including `Card1`. At the Figma reference
+widths, the iPhone/iPad heights are:
+
+| Layout | Flutter height on iOS | Figma iPhone reference (390pt wide) | Figma iPad reference (834pt wide) |
+| --- | --- | --- | --- |
+| Small1–4 | Fixed height from the factory metadata | 138, 146, 146, 130pt | 138, 166, 166, 130pt |
+| Big1–2, Collap1Expanded | 42% of screen height | 356pt | 356pt |
+| Big3–4 | 39% of screen height | 328pt | 328pt |
+| Big5 | 36% of screen height | 300pt | 300pt |
+| Collap2Expanded | 40% of screen height | — | — |
+| Full1–3 | Host height | 844pt | 1194pt |
+| Card1 | 27% of screen height | 230pt at 280pt width | 230pt at 360pt width |
+
+`Card2` also has the 27% iOS height rule in Flutter metadata. Its native
+factory is not registered yet.
+On iOS, the legacy `Big6`–`Big9` and `Collap3Expanded` IDs inherit the height
+of the layouts they map to (`Big2`–`Big5` and `Collap2Expanded`).
+`Small5` inherits `Small3` height: 146pt on iPhone and 166pt on iPad.
+Pass `screenWidth` to `heightForScreen` when calculating an iPad height outside
+`CoreAdSlot`; the slot supplies it from `MediaQuery` automatically.
+
+The iOS registry also accepts the Android-only IDs so a shared placement can
+resolve on both platforms. `Small5` maps to `Small3`; `Big6`–`Big9` map to
+`Big2`–`Big5`; `Full4`/`Full5` map to `Full2`/`Full3`; and the third collapsible
+pair maps to the second iOS collapsible style. Flutter owns the close, collapse,
+and next navigation controls.
 
 4. Render native ad:
 
@@ -300,35 +476,16 @@ multiple placements. Those placements can still share one native ad unit ID.
 
 ### Collapsible Native
 
-Use `AdsCollapsibleNative` when a native ad should collapse into a smaller
-banner. The native and banner must use separate placements:
+`CoreAdSlot` selects the collapse destination from the script. With `enable=2`,
+the large native collapses to the `banner_collap` banner. With `enable=4`, it
+collapses to another native placement using the same ad unit name and the
+`Small1` factory by default. The app can control re-expansion:
 
 ```dart
-class AppAdPlacements {
-  static const articleNative = AdPlacement(
-    key: 'article_native',
-    type: AdType.native,
-    nativeFactoryId: 'article_native_factory',
-  );
-
-  static const articleCollapsedBanner = AdPlacement(
-    key: 'article_collapsed_banner',
-    type: AdType.banner,
-  );
-}
-```
-
-Keep the expanded state in the parent widget:
-
-Render the collapsible ad:
-
-```dart
-AdsCollapsibleNative(
-  nativePlacement: AppAdPlacements.articleNative,
-  bannerPlacement: AppAdPlacements.articleCollapsedBanner,
+CoreAdSlot(
+  controller: ads,
+  placementKey: 'banner_home',
   expanded: isNativeExpanded,
-  nativeHeight: 140,
-  bannerConfig: const BannerAdConfig.banner(),
   onCollapsed: () {
     setState(() {
       isNativeExpanded = false;
@@ -337,7 +494,20 @@ AdsCollapsibleNative(
 );
 ```
 
-When the user taps the close button, the native ad is replaced by the banner.
+`collap_config` accepts a slash-separated string of positive, one-based tap
+numbers. For example, `"24/26"` selects taps 24 and 26, not taps 2, 4, and 6.
+On a selected tap, the close button ignores the pointer and the native ad
+underneath receives it; other taps
+collapse to the configured smaller ad. The counter lives for this widget
+state's lifetime, including re-expansion, and resets when the widget is disposed or
+the native placement changes. A tap on a close control reaching an ad can
+create [accidental-click risk](https://support.google.com/admob/answer/3342054?hl=en);
+review the UI and account policy before release.
+
+A normal native placement such as `native_result` with `native_template: "Small1"`
+does not acquire a collapse button merely because its JSON contains
+`collap_config`. That field is ignored for non-collapsible placements.
+
 If the app wants to expand the native ad again after navigation, listen for the
 route pop in the parent widget and set `isNativeExpanded = true`.
 

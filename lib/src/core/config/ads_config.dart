@@ -46,4 +46,17 @@ class AdsConfig {
 
   /// Whether this config is using test behavior.
   bool get isTest => environment == AdsEnvironment.test;
+
+  /// Returns the same ads setup with updated fullscreen cooldown rules.
+  AdsConfig withFullscreenCooldown(FullscreenAdCooldownConfig cooldown) =>
+      AdsConfig(
+        environment: environment,
+        adUnitIds: adUnitIds,
+        network: network,
+        consent: consent,
+        request: request,
+        fullscreenCooldown: cooldown,
+        callbacks: callbacks,
+        enableDebugLogs: enableDebugLogs,
+      );
 }

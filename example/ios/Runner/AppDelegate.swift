@@ -1,85 +1,9 @@
 import Flutter
-import GoogleMobileAds
+import core_ads
 import google_mobile_ads
 import UIKit
 
-final class ExampleNativeAdFactory: NSObject, FLTNativeAdFactory {
-  func createNativeAd(
-    _ nativeAd: NativeAd,
-    customOptions: [AnyHashable: Any]? = nil
-  ) -> NativeAdView? {
-    let adView = NativeAdView()
-    adView.clipsToBounds = true
-
-    let container = UIStackView()
-    container.axis = .vertical
-    container.alignment = .fill
-    container.spacing = 4
-    container.layoutMargins = UIEdgeInsets(top: 10, left: 14, bottom: 10, right: 14)
-    container.isLayoutMarginsRelativeArrangement = true
-    container.translatesAutoresizingMaskIntoConstraints = false
-
-    let sponsoredLabel = UILabel()
-    sponsoredLabel.text = "Sponsored"
-    sponsoredLabel.font = UIFont.systemFont(ofSize: 11)
-    sponsoredLabel.numberOfLines = 1
-    sponsoredLabel.lineBreakMode = .byTruncatingTail
-    sponsoredLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-    let headlineLabel = UILabel()
-    headlineLabel.font = UIFont.boldSystemFont(ofSize: 16)
-    headlineLabel.numberOfLines = 1
-    headlineLabel.lineBreakMode = .byTruncatingTail
-    headlineLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-    let bodyLabel = UILabel()
-    bodyLabel.font = UIFont.systemFont(ofSize: 13)
-    bodyLabel.numberOfLines = 1
-    bodyLabel.lineBreakMode = .byTruncatingTail
-    bodyLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-    let mediaView = MediaView()
-    mediaView.translatesAutoresizingMaskIntoConstraints = false
-
-    let callToActionButton = UIButton(type: .system)
-    callToActionButton.titleLabel?.numberOfLines = 1
-    callToActionButton.titleLabel?.lineBreakMode = .byTruncatingTail
-    callToActionButton.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-    container.addArrangedSubview(sponsoredLabel)
-    container.addArrangedSubview(headlineLabel)
-    container.addArrangedSubview(bodyLabel)
-    container.addArrangedSubview(mediaView)
-    container.addArrangedSubview(callToActionButton)
-    adView.addSubview(container)
-
-    NSLayoutConstraint.activate([
-      container.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
-      container.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
-      container.topAnchor.constraint(equalTo: adView.topAnchor),
-      container.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
-      mediaView.heightAnchor.constraint(equalToConstant: 120),
-    ])
-
-    adView.headlineView = headlineLabel
-    adView.bodyView = bodyLabel
-    adView.mediaView = mediaView
-    adView.callToActionView = callToActionButton
-
-    headlineLabel.text = nativeAd.headline
-    mediaView.mediaContent = nativeAd.mediaContent
-
-    bodyLabel.text = nativeAd.body
-    bodyLabel.isHidden = nativeAd.body == nil
-
-    callToActionButton.setTitle(nativeAd.callToAction, for: .normal)
-    callToActionButton.isHidden = nativeAd.callToAction == nil
-    callToActionButton.isUserInteractionEnabled = false
-
-    adView.nativeAd = nativeAd
-    return adView
-  }
-}
+extension CoreAdsNativeFactory: FLTNativeAdFactory {}
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -92,10 +16,12 @@ final class ExampleNativeAdFactory: NSObject, FLTNativeAdFactory {
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
-      engineBridge.pluginRegistry,
-      factoryId: "example_native_factory",
-      nativeAdFactory: ExampleNativeAdFactory()
-    )
+    for id in CoreAdsNativeFactories.ids {
+      FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
+        engineBridge.pluginRegistry,
+        factoryId: id,
+        nativeAdFactory: CoreAdsNativeFactory(template: id)
+      )
+    }
   }
 }

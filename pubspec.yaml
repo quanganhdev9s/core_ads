@@ -23,6 +23,13 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.quanganh.core_ads
+        pluginClass: CoreAdsPlugin
+      ios:
+        pluginClass: CoreAdsPlugin
 
   # To add assets to your package, add an assets section, like this:
   # assets:

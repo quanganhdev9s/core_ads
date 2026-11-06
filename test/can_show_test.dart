@@ -161,6 +161,53 @@ void main() {
   );
 
   test(
+    'ignored inter bypasses gap without moving the counted inter timestamp',
+    () {
+      var now = _now;
+      final counted = const AdPlacement(
+        key: 'inter_home.inter',
+        type: AdType.interstitial,
+      );
+      final ignored = const AdPlacement(
+        key: 'inter_language.inter',
+        type: AdType.interstitial,
+      );
+      final controller = FullscreenAdController(
+        cooldown: const FullscreenAdCooldownConfig(
+          interstitialInterval: Duration(milliseconds: 10000),
+          ignoredInterstitialPlacementKeys: {'inter_language.inter'},
+        ),
+        now: () => now,
+      );
+
+      controller.markShown(counted);
+      now = now.add(const Duration(milliseconds: 2000));
+      expect(controller.canShow(counted).isFailure, isTrue);
+      expect(controller.canShow(ignored).isSuccess, isTrue);
+      controller.markShown(ignored);
+
+      now = now.add(const Duration(milliseconds: 8000));
+      expect(controller.canShow(counted).isSuccess, isTrue);
+      controller.markShown(counted);
+      expect(controller.canShow(ignored).isSuccess, isTrue);
+      expect(controller.canShow(counted).isFailure, isTrue);
+    },
+  );
+
+  test('ignored inter still participates in interstitial to app-open gap', () {
+    final controller = FullscreenAdController(
+      cooldown: const FullscreenAdCooldownConfig(
+        ignoredInterstitialPlacementKeys: {'inter_language.inter'},
+      ),
+      now: () => _now,
+    );
+    controller.markShown(
+      const AdPlacement(key: 'inter_language.inter', type: AdType.interstitial),
+    );
+    expect(controller.canShow(_appOpen).isFailure, isTrue);
+  });
+
+  test(
     'show eligibility checks consent, lock and cooldown without loading',
     () {
       var now = _now;
