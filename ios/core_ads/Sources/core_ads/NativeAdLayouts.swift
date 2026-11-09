@@ -25,11 +25,21 @@ final class NativeAdLayouts {
   }
 
   func build(
-    _ template: NativeAdTemplate, ad: NativeAd, placementKey: String? = nil
+    _ template: NativeAdTemplate, ad: NativeAd, placementKey: String? = nil,
+    style: NativeAdStyle? = nil
   ) -> NativeAdView {
-    let dark = template == .full2 || template == .full4
-    let elements = NativeAdElements(ad: ad, dark: dark)
     let root = NativeAdView()
+    render(template, in: root, ad: ad, placementKey: placementKey, style: style)
+    return root
+  }
+
+  func render(
+    _ template: NativeAdTemplate, in root: NativeAdView,
+    ad: NativeAd, placementKey: String? = nil, style: NativeAdStyle? = nil
+  ) {
+    root.subviews.forEach { $0.removeFromSuperview() }
+    let dark = template == .full4
+    let elements = NativeAdElements(ad: ad, dark: dark)
     NativeAdDesign.card(
       root,
       dark: dark,
@@ -68,9 +78,9 @@ final class NativeAdLayouts {
     case .big5, .big9:
       big(root, elements: elements, variant: 5)
     case .languageStart1:
-      languageStart(root, elements: elements, variant: 1, placementKey: placementKey)
+      languageStart(root, elements: elements, variant: 1)
     case .languageStart2:
-      languageStart(root, elements: elements, variant: 2, placementKey: placementKey)
+      languageStart(root, elements: elements, variant: 2)
     case .full1:
       full(root, elements: elements, variant: 1)
     case .full2, .full4:
@@ -83,7 +93,7 @@ final class NativeAdLayouts {
       card(root, elements: elements)
     }
     elements.bind(to: root)
-    return root
+    style?.apply(to: root, elements: elements, template: template)
   }
 
   private func column(in root: NativeAdView) -> UIStackView {
@@ -118,26 +128,37 @@ final class NativeAdLayouts {
     } else {
       addConstrainedTextButton(button, to: row)
     }
-    NativeAdDesign.height(row, circle && isPad ? 48 : 54)
+    NativeAdDesign.height(row, circle ? 48 : 54)
   }
 
   private func small(_ root: NativeAdView, elements: NativeAdElements, variant: Int) {
     let stack = column(in: root)
     switch variant {
     case 1:
-      let info = elements.infoRow(meta: .stars)
+      let info = elements.infoRow(badgeInTitle: false, meta: .badgeStarsFree)
       NativeAdDesign.height(info, 56)
       stack.addArrangedSubview(info)
       stack.addArrangedSubview(elements.button())
     case 2:
-      stack.addArrangedSubview(elements.button())
-      let info = elements.infoRow(badgeInTitle: false, meta: .badge)
-      NativeAdDesign.height(info, isPad ? 84 : 64)
-      stack.addArrangedSubview(info)
+      let row = NativeAdDesign.stack(.horizontal, spacing: NativeAdDesign.gap)
+      let details = NativeAdDesign.stack(.vertical, spacing: NativeAdDesign.gap)
+      details.addArrangedSubview(elements.textColumn(bodyLines: 2))
+      details.addArrangedSubview(UIView())
+      details.addArrangedSubview(elements.button())
+      row.addArrangedSubview(details)
+      let imageSize: CGFloat = isPad ? 140 : 120
+      let image = media(elements, height: imageSize)
+      image.widthAnchor.constraint(equalToConstant: imageSize).isActive = true
+      row.addArrangedSubview(image)
+      NativeAdDesign.height(row, isPad ? 140 : 120)
+      stack.addArrangedSubview(row)
     case 3:
       let row = NativeAdDesign.stack(.horizontal, spacing: NativeAdDesign.gap)
       row.alignment = .top
-      row.addArrangedSubview(elements.icon(size: 96))
+      let imageSize: CGFloat = isPad ? 140 : 120
+      let image = media(elements, height: imageSize)
+      image.widthAnchor.constraint(equalToConstant: imageSize).isActive = true
+      row.addArrangedSubview(image)
       let details = NativeAdDesign.stack(.vertical, spacing: NativeAdDesign.gap)
       let text = elements.textColumn(bodyLines: 2)
       details.addArrangedSubview(text)
@@ -145,7 +166,7 @@ final class NativeAdLayouts {
       details.addArrangedSubview(spacer)
       details.addArrangedSubview(elements.button())
       row.addArrangedSubview(details)
-      NativeAdDesign.height(row, isPad ? 140 : 120)
+      NativeAdDesign.height(row, imageSize)
       stack.addArrangedSubview(row)
     default:
       stack.addArrangedSubview(elements.button())
@@ -159,16 +180,16 @@ final class NativeAdLayouts {
     let stack = column(in: root)
     switch variant {
     case 1:
-      stack.addArrangedSubview(media(elements, height: 210, flexible: true))
-      let info = elements.infoRow(meta: .stars)
-      NativeAdDesign.height(info, 56)
+      let info = elements.infoRow()
+      NativeAdDesign.height(info, 48)
       stack.addArrangedSubview(info)
+      stack.addArrangedSubview(media(elements, height: 218, flexible: true))
       stack.addArrangedSubview(elements.button())
     case 2:
-      stack.addArrangedSubview(media(elements, height: 210, flexible: true))
-      let info = elements.infoRow(meta: .stars)
-      NativeAdDesign.height(info, 56)
+      let info = elements.infoRow()
+      NativeAdDesign.height(info, 48)
       stack.addArrangedSubview(info)
+      stack.addArrangedSubview(media(elements, height: 218, flexible: true))
       stack.addArrangedSubview(trailingButton(elements))
     case 3:
       let title = elements.textColumn(showBody: false)
@@ -191,12 +212,12 @@ final class NativeAdLayouts {
   private func languageStart(
     _ root: NativeAdView,
     elements: NativeAdElements,
-    variant: Int,
-    placementKey: String?
+    variant: Int
   ) {
     let stack = column(in: root)
     let button = elements.button()
     if variant == 2 {
+      button.backgroundColor = NativeAdDesign.languageStartUnselectedCta
       stack.addArrangedSubview(button)
     }
     stack.addArrangedSubview(media(elements, height: 218, flexible: true))
@@ -211,29 +232,17 @@ final class NativeAdLayouts {
       stack.addArrangedSubview(area)
       button.translatesAutoresizingMaskIntoConstraints = false
       area.addSubview(button)
-      let fullWidth = button.widthAnchor.constraint(equalTo: area.widthAnchor)
-      let compactWidth = button.widthAnchor.constraint(equalToConstant: 96)
       NSLayoutConstraint.activate([
         button.trailingAnchor.constraint(equalTo: area.trailingAnchor),
         button.centerYAnchor.constraint(equalTo: area.centerYAnchor),
-        fullWidth,
+        button.widthAnchor.constraint(equalTo: area.widthAnchor),
       ])
-      if let placementKey, let height = elements.callToActionHeightConstraint {
-        NativeLanguageStartState.shared.bind(
-          placementKey, button: button, variant: variant,
-          fullWidth: fullWidth, compactWidth: compactWidth, height: height
-        )
-      }
-    } else if let placementKey {
-      NativeLanguageStartState.shared.bind(
-        placementKey, button: button, variant: variant
-      )
     }
   }
 
   private func collapsible(_ root: NativeAdView, elements: NativeAdElements) {
     let stack = column(in: root)
-    let header = UIView()
+    let header = elements.textColumn(showBody: false)
     NativeAdDesign.height(header, 28)
     stack.addArrangedSubview(header)
     stack.addArrangedSubview(media(elements, height: 218, flexible: true))
@@ -241,12 +250,12 @@ final class NativeAdLayouts {
     // AdsCollapsibleNative overlays the close control and owns the collapse action.
   }
 
-  // Collap1 has its own layout entry. Its iOS geometry matches Big1.
+  // Collap1 uses the same assets as Big1, with media above the app details.
   private func collap1Expanded(_ root: NativeAdView, elements: NativeAdElements) {
     let stack = column(in: root)
-    stack.addArrangedSubview(media(elements, height: 210, flexible: true))
-    let info = elements.infoRow(meta: .stars)
-    NativeAdDesign.height(info, 56)
+    stack.addArrangedSubview(media(elements, height: 218, flexible: true))
+    let info = elements.infoRow()
+    NativeAdDesign.height(info, 48)
     stack.addArrangedSubview(info)
     stack.addArrangedSubview(elements.button())
   }
@@ -256,7 +265,7 @@ final class NativeAdLayouts {
   }
 
   private func collap2Collapsed(_ root: NativeAdView, elements: NativeAdElements) {
-    compact(root, elements: elements, circle: true)
+    compact(root, elements: elements, circle: false)
   }
 
   private func collap3Collapsed(_ root: NativeAdView, elements: NativeAdElements) {
@@ -266,6 +275,19 @@ final class NativeAdLayouts {
   private func full(_ root: NativeAdView, elements: NativeAdElements, variant: Int) {
     let stack = NativeAdDesign.stack(.vertical)
     NativeAdDesign.pin(stack, to: root)
+    if variant == 2 {
+      let header = UIView()
+      let badge = NativeAdDesign.badgeLabel()
+      badge.translatesAutoresizingMaskIntoConstraints = false
+      header.addSubview(badge)
+      NSLayoutConstraint.activate([
+        badge.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 12),
+        badge.topAnchor.constraint(equalTo: header.topAnchor, constant: 12),
+        badge.heightAnchor.constraint(equalToConstant: 16),
+      ])
+      NativeAdDesign.height(header, 40)
+      stack.addArrangedSubview(header)
+    }
     let mediaArea = UIView()
     mediaArea.clipsToBounds = true
     let adMedia = elements.media()
@@ -287,7 +309,7 @@ final class NativeAdLayouts {
         adMedia.heightAnchor.constraint(equalToConstant: mediaHeight),
       ])
     }
-    if variant != 1 {
+    if variant != 2 {
       let badge = NativeAdDesign.badgeLabel()
       badge.translatesAutoresizingMaskIntoConstraints = false
       mediaArea.addSubview(badge)
@@ -303,7 +325,7 @@ final class NativeAdLayouts {
     let content = NativeAdDesign.stack(.vertical, spacing: 12)
     NativeAdDesign.pin(content, to: panel, inset: 16)
     let info = elements.infoRow(
-      badgeInTitle: variant == 1,
+      badgeInTitle: false,
       meta: variant == 1 ? .stars : .none
     )
     NativeAdDesign.height(info, variant == 1 ? 56 : 48)
@@ -316,9 +338,24 @@ final class NativeAdLayouts {
 
   private func card(_ root: NativeAdView, elements: NativeAdElements) {
     let stack = NativeAdDesign.stack(.vertical, spacing: NativeAdDesign.gap)
-    NativeAdDesign.pin(stack, to: root, inset: 7)
-    stack.addArrangedSubview(media(elements, height: 160, flexible: true))
-    stack.addArrangedSubview(titleAndButton(elements))
+    NativeAdDesign.pin(stack, to: root, inset: 12)
+    let mediaRow = UIView()
+    let image = media(elements, height: 120)
+    image.widthAnchor.constraint(equalToConstant: 120).isActive = true
+    image.translatesAutoresizingMaskIntoConstraints = false
+    mediaRow.addSubview(image)
+    NSLayoutConstraint.activate([
+      image.centerXAnchor.constraint(equalTo: mediaRow.centerXAnchor),
+      image.centerYAnchor.constraint(equalTo: mediaRow.centerYAnchor),
+    ])
+    NativeAdDesign.height(mediaRow, 120)
+    stack.addArrangedSubview(mediaRow)
+    stack.setCustomSpacing(0, after: mediaRow)
+    stack.addArrangedSubview(UIView())
+    let title = elements.textColumn(showBody: false)
+    NativeAdDesign.height(title, 20)
+    stack.addArrangedSubview(title)
+    stack.addArrangedSubview(elements.button())
   }
 
   private func trailingButton(_ elements: NativeAdElements) -> UIStackView {

@@ -16,7 +16,7 @@ import '../core/logging/ads_logger.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
 import '../ads/banner/banner_ad_config.dart';
-import '../ads/native/native_ad_type.dart';
+import '../ads/native/native_ad_style.dart';
 import 'ads_service.dart';
 
 /// Google Mobile Ads implementation of [AdsService].
@@ -124,10 +124,13 @@ class GoogleAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> show(AdPlacement placement) {
+  Future<AdResult<void>> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) {
     return switch (placement.type) {
-      AdType.interstitial => _showInterstitial(placement),
-      AdType.appOpen => _showAppOpen(placement),
+      AdType.interstitial => _showInterstitial(placement, onShown: onShown),
+      AdType.appOpen => _showAppOpen(placement, onShown: onShown),
       AdType.banner => Future.value(
         const AdResult.failure(AdFailure.notReady()),
       ),
@@ -344,6 +347,7 @@ class GoogleAdsService implements AdsService {
         placement,
         adUnitId: adUnitId,
         adSize: adSize,
+        bannerConfig: bannerConfig,
       ),
     );
   }
@@ -352,12 +356,23 @@ class GoogleAdsService implements AdsService {
     AdPlacement placement, {
     required String adUnitId,
     required AdSize adSize,
+    required BannerAdConfig bannerConfig,
   }) async {
     final completer = Completer<AdResult<void>>();
 
     final bannerAd = BannerAd(
       adUnitId: adUnitId,
-      request: _request,
+      request: bannerConfig.collapsible
+          ? AdRequest(
+              keywords: _request.keywords,
+              contentUrl: _request.contentUrl,
+              neighboringContentUrls: _request.neighboringContentUrls,
+              nonPersonalizedAds: _request.nonPersonalizedAds,
+              httpTimeoutMillis: _request.httpTimeoutMillis,
+              extras: {...?_request.extras, 'collapsible': 'bottom'},
+              mediationExtras: _request.mediationExtras,
+            )
+          : _request,
       size: adSize,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -448,11 +463,11 @@ class GoogleAdsService implements AdsService {
     final nativeAd = NativeAd(
       adUnitId: adUnitId,
       factoryId: factoryId,
-      customOptions:
-          factoryId == NativeAdType.languageStart1.factoryId ||
-              factoryId == NativeAdType.languageStart2.factoryId
-          ? <String, Object>{'placementKey': placement.key}
-          : null,
+      customOptions: <String, Object>{
+        'placementKey': placement.key,
+        if (placement.nativeStyle case final style?)
+          NativeAdStyleKeys.factoryOption: style.values,
+      },
       request: _request,
       listener: NativeAdListener(
         onAdLoaded: (ad) {
@@ -698,7 +713,10 @@ class GoogleAdsService implements AdsService {
     return completer.future;
   }
 
-  Future<AdResult<void>> _showInterstitial(AdPlacement placement) async {
+  Future<AdResult<void>> _showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     final ad = _interstitialAds[placement];
     if (ad == null) {
       return const AdResult.failure(AdFailure.notReady());
@@ -722,7 +740,10 @@ class GoogleAdsService implements AdsService {
           completer.complete(AdResult.failure(_mapAdError(error)));
         }
       },
-      onAdShowedFullScreenContent: (_) => _emitShown(placement),
+      onAdShowedFullScreenContent: (_) {
+        onShown?.call();
+        _emitShown(placement);
+      },
       onAdImpression: (_) => _emitImpression(placement),
       onAdClicked: (_) => _emitClicked(placement),
     );
@@ -744,7 +765,10 @@ class GoogleAdsService implements AdsService {
     return completer.future;
   }
 
-  Future<AdResult<void>> _showAppOpen(AdPlacement placement) async {
+  Future<AdResult<void>> _showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     final ad = _appOpenAds[placement];
     if (ad == null) {
       return const AdResult.failure(AdFailure.notReady());
@@ -768,7 +792,10 @@ class GoogleAdsService implements AdsService {
           completer.complete(AdResult.failure(_mapAdError(error)));
         }
       },
-      onAdShowedFullScreenContent: (_) => _emitShown(placement),
+      onAdShowedFullScreenContent: (_) {
+        onShown?.call();
+        _emitShown(placement);
+      },
       onAdImpression: (_) => _emitImpression(placement),
       onAdClicked: (_) => _emitClicked(placement),
     );

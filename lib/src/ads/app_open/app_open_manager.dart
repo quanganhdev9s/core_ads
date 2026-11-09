@@ -103,7 +103,7 @@ class AppOpenManager implements AdManager {
   }
 
   /// Shows the app open ad only when it is ready and not expired.
-  Future<AdResult<void>> show() async {
+  Future<AdResult<void>> show({void Function()? onShown}) async {
     if (_isShowing) {
       return const AdResult.failure(
         AdFailure(
@@ -138,7 +138,7 @@ class AppOpenManager implements AdManager {
     _isShowing = true;
     final AdResult<void> result;
     try {
-      result = await service.show(placement);
+      result = await service.show(placement, onShown: onShown);
     } finally {
       _isShowing = false;
       fullscreenAdController.release(placement);

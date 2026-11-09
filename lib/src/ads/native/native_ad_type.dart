@@ -41,7 +41,7 @@ enum NativeAdType {
     screenHeightFraction: 0.40,
     iosScreenHeightFraction: 0.40,
   ),
-  collap2Collapsed('Collap2Collapsed', 74),
+  collap2Collapsed('Collap2Collapsed', 74, iosHeight: 80),
   collap3Expanded(
     'Collap3Expanded',
     null,
@@ -116,4 +116,22 @@ enum NativeAdType {
     }
     return null;
   }
+}
+
+/// Factory dự phòng theo vị trí hiển thị khi config không khai báo template.
+abstract final class NativeAdFactoryDefaults {
+  /// Native placement thông thường.
+  static const native = NativeAdType.big1;
+
+  /// Nhánh native của banner khi không dùng layout thu gọn.
+  static const bannerNative = NativeAdType.small1;
+
+  /// Nhánh native có thể thu gọn của banner.
+  static const expandedCollapse = NativeAdType.collap1Expanded;
+
+  /// Chỉ dùng khi factory lớn không có cặp layout nhỏ.
+  static const collapsedCollapse = NativeAdType.small1;
+
+  static const fullScreen = NativeAdType.full1;
+  static const languageSmall = NativeAdType.tiny1;
 }

@@ -15,7 +15,6 @@ enum NativeAdDesign {
   static let languageStartUnselectedCta = UIColor(hex: 0x7E2D96)
   static let badge = UIColor(hex: 0xF8C600)
   static let star = UIColor(hex: 0xEBBC00)
-  static let mediaPlaceholder = UIColor(hex: 0x0E0A15)
 
   static let cardRadius: CGFloat = 12
   static let cardInset: CGFloat = 13 // 1pt outline + 12pt design padding
@@ -24,8 +23,7 @@ enum NativeAdDesign {
   static let buttonHeight: CGFloat = 48
   static let ctaFontSize: CGFloat = 14
   static let ctaLineHeight: CGFloat = 20
-  static let ctaPaddingVertical: CGFloat = 4
-  static let ctaPaddingHorizontal: CGFloat = 12
+  static let ctaPaddingHorizontal: CGFloat = 16
   static let mediaRadius: CGFloat = 8
 
   static func card(_ view: UIView, dark: Bool = false, fullScreen: Bool = false) {
@@ -167,30 +165,6 @@ private final class InsetLabel: UILabel {
   }
 }
 
-private final class InsetButton: UIButton {
-  private let insets: UIEdgeInsets
-
-  init(insets: UIEdgeInsets) {
-    self.insets = insets
-    super.init(frame: .zero)
-  }
-
-  required init?(coder: NSCoder) { return nil }
-
-  override var intrinsicContentSize: CGSize {
-    let size = super.intrinsicContentSize
-    return CGSize(
-      width: size.width + insets.left + insets.right,
-      height: size.height + insets.top + insets.bottom
-    )
-  }
-
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    titleLabel?.frame = bounds.inset(by: insets)
-  }
-}
-
 /// A single set of ad asset views, composed by the selected layout.
 final class NativeAdElements {
   let ad: NativeAd
@@ -220,7 +194,6 @@ final class NativeAdElements {
   func icon(size: CGFloat = NativeAdDesign.iconSize) -> UIImageView {
     let view = UIImageView(image: ad.icon?.image)
     view.contentMode = .scaleAspectFill
-    view.backgroundColor = NativeAdDesign.mediaPlaceholder
     view.layer.cornerRadius = size == 96 ? 16 : 8
     view.clipsToBounds = true
     view.isHidden = ad.icon?.image == nil
@@ -233,8 +206,8 @@ final class NativeAdElements {
   func media() -> MediaView {
     let view = MediaView()
     view.mediaContent = ad.mediaContent
+    // Match Android FIT_CENTER so the full ad image stays visible in every slot.
     view.contentMode = .scaleAspectFit
-    view.backgroundColor = .clear
     view.isOpaque = false
     view.layer.cornerRadius = NativeAdDesign.mediaRadius
     view.clipsToBounds = true
@@ -243,18 +216,21 @@ final class NativeAdElements {
   }
 
   func button(circle: Bool = false) -> UIButton {
-    let button: UIButton = circle ? UIButton(type: .custom) : InsetButton(insets: UIEdgeInsets(
-      top: NativeAdDesign.ctaPaddingVertical,
-      left: NativeAdDesign.ctaPaddingHorizontal,
-      bottom: NativeAdDesign.ctaPaddingVertical,
-      right: NativeAdDesign.ctaPaddingHorizontal
-    ))
+    let button = UIButton(type: .custom)
+    if !circle {
+      button.contentEdgeInsets = UIEdgeInsets(
+        top: 0, left: NativeAdDesign.ctaPaddingHorizontal,
+        bottom: 0, right: NativeAdDesign.ctaPaddingHorizontal
+      )
+    }
     button.backgroundColor = NativeAdDesign.cta
     button.layer.cornerRadius = 24
     button.clipsToBounds = true
     button.isUserInteractionEnabled = false // Google Mobile Ads handles clicks on registered asset views.
     button.isHidden = ad.callToAction?.isEmpty ?? true
     button.accessibilityLabel = ad.callToAction
+    button.contentHorizontalAlignment = .center
+    button.contentVerticalAlignment = .center
     button.titleLabel?.numberOfLines = 1
     button.titleLabel?.lineBreakMode = .byTruncatingTail
     button.titleLabel?.adjustsFontSizeToFitWidth = false

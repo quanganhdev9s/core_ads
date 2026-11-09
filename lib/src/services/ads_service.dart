@@ -17,8 +17,11 @@ abstract interface class AdsService {
     BannerAdConfig? bannerConfig,
   });
 
-  /// Shows an ad for [placement].
-  Future<AdResult<void>> show(AdPlacement placement);
+  /// Shows an ad for [placement]. [onShown] runs when the SDK reports it visible.
+  Future<AdResult<void>> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  });
 
   /// Shows a rewarded ad and calls [onRewardEarned] only when the SDK confirms
   /// the reward.

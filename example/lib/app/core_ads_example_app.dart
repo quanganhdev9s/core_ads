@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../pages/ads_example_page.dart';
 import '../pages/scripted_ads_flow_page.dart';
 
 class CoreAdsExampleApp extends StatelessWidget {
@@ -14,9 +13,7 @@ class CoreAdsExampleApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: const bool.fromEnvironment('LEGACY_ADS_DEMO')
-          ? const AdsExamplePage()
-          : const ScriptedAdsFlowPage(),
+      home: const ScriptedAdsFlowPage(),
     );
   }
 }

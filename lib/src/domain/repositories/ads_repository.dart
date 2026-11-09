@@ -37,7 +37,11 @@ abstract interface class AdsRepository {
   Widget nativeAd(AdPlacement placement);
 
   /// Shows an interstitial ad when one is ready.
-  Future<AdResult<void>> showInterstitial(AdPlacement placement);
+  /// [onShown] belongs only to this show attempt.
+  Future<AdResult<void>> showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  });
 
   /// Shows a rewarded ad and completes after the reward flow finishes.
   Future<AdResult<void>> showRewarded({
@@ -52,7 +56,11 @@ abstract interface class AdsRepository {
   });
 
   /// Shows an app open ad when one is ready and valid.
-  Future<AdResult<void>> showAppOpen(AdPlacement placement);
+  /// [onShown] belongs only to this show attempt.
+  Future<AdResult<void>> showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  });
 
   /// Handles an app resume event for an app open ad placement.
   Future<AdResult<void>> handleAppResume(AdPlacement placement);

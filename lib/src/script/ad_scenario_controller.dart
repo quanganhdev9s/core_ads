@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../ads/native/ads_full_screen_native.dart';
@@ -7,6 +9,7 @@ import '../core/config/ad_placement.dart';
 import '../core/config/ads_config.dart';
 import '../core/config/ad_unit_ids.dart';
 import '../core/enums/ad_type.dart';
+import '../core/enums/ad_load_status.dart';
 import '../core/fullscreen/fullscreen_ad_cooldown_config.dart';
 import '../core/results/ad_failure.dart';
 import '../core/results/ad_result.dart';
@@ -31,16 +34,21 @@ final class AdScenarioController extends ChangeNotifier {
     required AdScript initialScript,
     required this.resolveAdUnitIds,
     required this.buildAdsConfig,
-    String? defaultNativeFactoryId,
+    String? bannerNativeFactoryId,
     String? expandedCollapseFactoryId,
     String? collapsedNativeFactoryId,
     ScenarioAdsInitializer? initializeAds,
-  }) : defaultNativeFactoryId =
-           defaultNativeFactoryId ?? NativeAdType.small1.factoryId,
+    this.audience = const AdScriptAudience(),
+    this.useTestIds = false,
+  }) : bannerNativeFactoryId =
+           bannerNativeFactoryId ??
+           NativeAdFactoryDefaults.bannerNative.factoryId,
        expandedCollapseFactoryId =
-           expandedCollapseFactoryId ?? NativeAdType.big4.factoryId,
+           expandedCollapseFactoryId ??
+           NativeAdFactoryDefaults.expandedCollapse.factoryId,
        collapsedNativeFactoryId =
-           collapsedNativeFactoryId ?? NativeAdType.small1.factoryId,
+           collapsedNativeFactoryId ??
+           NativeAdFactoryDefaults.collapsedCollapse.factoryId,
        _initializeAds = initializeAds ?? CoreAds.initialize,
        _script = initialScript {
     _coordinator = _makeCoordinator(initialScript);
@@ -48,10 +56,12 @@ final class AdScenarioController extends ChangeNotifier {
 
   final AdUnitIdResolver resolveAdUnitIds;
   final ScenarioAdsConfigBuilder buildAdsConfig;
-  final String defaultNativeFactoryId;
+  final String bannerNativeFactoryId;
   final String expandedCollapseFactoryId;
   final String collapsedNativeFactoryId;
   final ScenarioAdsInitializer _initializeAds;
+  final AdScriptAudience audience;
+  final bool useTestIds;
   final AdInterstitialCallCounter _callCounter = AdInterstitialCallCounter();
   int _onboardingTransitionCount = 0;
 
@@ -71,6 +81,17 @@ final class AdScenarioController extends ChangeNotifier {
 
   AdScenarioPlan resolve(String key) => _coordinator.resolve(key);
 
+  /// Tải tất cả bước được bật của [key] theo config hiện tại.
+  /// Kết quả rỗng nếu key tắt/thiếu hoặc không có bước cần tải.
+  /// Không tăng bộ đếm `step` của inter.
+  Future<Map<AdPlacement, AdResult<void>>> preloadScenario(String key) =>
+      _coordinator.preload(key);
+
+  /// Chỉ tải các native placement được bật của [key].
+  /// Ví dụ `inter_home` tải native kế tiếp mà không tải inter.
+  Future<Map<AdPlacement, AdResult<void>>> preloadNative(String key) =>
+      _coordinator.preload(key, onlyType: AdType.native);
+
   /// Gọi khi bắt đầu lại luồng onboarding để đếm chuyển màn từ 1.
   void resetNativeFullOnboarding() => _onboardingTransitionCount = 0;
 
@@ -82,9 +103,14 @@ final class AdScenarioController extends ChangeNotifier {
   /// `enable` mới mở native toàn màn hình.
   /// [onBeforeInterstitialShow] chỉ chạy khi inter đã qua `step_count` và
   /// tải thành công, ngay trước lệnh show thực tế.
-  Future<AdScenarioShowResult> showScenario(
+  /// [loading] do app cung cấp, phủ toàn màn hình khi phải đợi tải inter hoặc
+  /// app-open; cũng được dùng trong route native toàn màn hình khi native tải.
+  /// [preloadNextAd] tải trước native tiếp theo khi inter/app-open bắt đầu show.
+  Future<AdScenarioShowResult> showFullscreenAds(
     BuildContext context,
     String key, {
+    Widget? loading,
+    bool preloadNextAd = true,
     Future<void> Function(AdPlacement placement)? onBeforeInterstitialShow,
   }) async {
     final plan = resolve(key);
@@ -93,7 +119,8 @@ final class AdScenarioController extends ChangeNotifier {
     }
     if (key == AdScenarioKeys.nativeFullOnboarding) {
       _onboardingTransitionCount++;
-      if (_onboardingTransitionCount != plan.enable) {
+      final pages = script[key]?.pages ?? const <int>{};
+      if (!pages.contains(_onboardingTransitionCount)) {
         return AdScenarioShowResult(plan: plan, nativeAdShown: false);
       }
     }
@@ -101,36 +128,69 @@ final class AdScenarioController extends ChangeNotifier {
       return AdScenarioShowResult(plan: plan, nativeAdShown: false);
     }
 
+    final native = plan.native;
+    void preloadFollowingNative() {
+      if (!preloadNextAd || native == null) return;
+      final placement = native.placement;
+      final status = CoreAds.getStatus(placement);
+      if (status == AdLoadStatus.ready || status == AdLoadStatus.loading) {
+        return;
+      }
+      unawaited(_preloadNextNative(placement));
+    }
+
     AdResult<void>? fullscreenResult;
+    _FullscreenLoadingRoute? loadingRoute;
     if (plan.interstitial != null) {
-      fullscreenResult = await _coordinator.showInterstitial(
-        key,
-        loadIfNeeded: true,
-        onBeforeShow: onBeforeInterstitialShow,
-      );
+      try {
+        fullscreenResult = await _coordinator.showInterstitial(
+          key,
+          loadIfNeeded: true,
+          loadAd: (placement) {
+            loadingRoute = _openLoadingRoute(context, placement, loading);
+            return CoreAds.load(placement);
+          },
+          onShown: () => loadingRoute?.close(),
+          onShowStarted: (_) => preloadFollowingNative(),
+          onBeforeShow: onBeforeInterstitialShow,
+        );
+      } finally {
+        loadingRoute?.close();
+      }
     } else {
       for (final step in plan.steps) {
         if (step.placement.type != AdType.appOpen) continue;
-        if (!CoreAds.canShow(step.placement)) {
-          final loaded = await CoreAds.load(step.placement);
-          if (loaded.isFailure) {
-            fullscreenResult = loaded;
-            break;
+        if (!context.mounted) break;
+        try {
+          if (!CoreAds.canShow(step.placement)) {
+            loadingRoute = _openLoadingRoute(context, step.placement, loading);
+            final loaded = await CoreAds.load(step.placement);
+            if (loaded.isFailure) {
+              fullscreenResult = loaded;
+              break;
+            }
           }
+          final showing = CoreAds.showAppOpen(
+            step.placement,
+            onShown: () => loadingRoute?.close(),
+          );
+          preloadFollowingNative();
+          fullscreenResult = await showing;
+        } finally {
+          loadingRoute?.close();
         }
-        fullscreenResult = await CoreAds.showAppOpen(step.placement);
         break;
       }
     }
 
     var nativeAdShown = false;
-    final native = plan.native;
     if (native != null && context.mounted) {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (routeContext) => Scaffold(
             body: AdsFullScreenNative(
               step: native,
+              loading: loading,
               onVisible: () => nativeAdShown = true,
               onClose: () => Navigator.of(routeContext).pop(),
             ),
@@ -143,6 +203,27 @@ final class AdScenarioController extends ChangeNotifier {
       fullscreenResult: fullscreenResult,
       nativeAdShown: nativeAdShown,
     );
+  }
+
+  Future<void> _preloadNextNative(AdPlacement placement) async {
+    try {
+      await CoreAds.load(placement);
+    } catch (_) {
+      // AdsNative sẽ thử lại khi route mở nếu lần tải trước gặp lỗi.
+    }
+  }
+
+  _FullscreenLoadingRoute? _openLoadingRoute(
+    BuildContext context,
+    AdPlacement placement,
+    Widget? loading,
+  ) {
+    if (loading == null ||
+        !context.mounted ||
+        CoreAds.getStatus(placement) == AdLoadStatus.ready) {
+      return null;
+    }
+    return _FullscreenLoadingRoute.open(context, loading);
   }
 
   /// Khởi tạo CoreAds bằng ID và cooldown lấy từ script ban đầu.
@@ -175,11 +256,19 @@ final class AdScenarioController extends ChangeNotifier {
   ///
   /// JSON sai toàn bộ hoặc khởi tạo thất bại thì giữ script và ID map cũ.
   /// Placement sai riêng lẻ được log và tắt trong script mới.
-  Future<AdResult<void>> applyRemoteJson(String source) async {
+  Future<AdResult<void>> applyRemoteJson(
+    String source, {
+    String? pagesJson,
+  }) async {
     if (_busy) return _busyResult();
     _busy = true;
     try {
-      final nextScript = AdScript.parse(source);
+      final nextScript = AdScript.parse(
+        source,
+        audience: audience,
+        pagesJson: pagesJson,
+        useTestIds: useTestIds,
+      );
       final nextCoordinator = _makeCoordinator(nextScript);
       if (_initialized) {
         final result = await _initializeAds(
@@ -216,21 +305,18 @@ final class AdScenarioController extends ChangeNotifier {
       AdScenarioCoordinator(
         script: script,
         resolveAdUnitIds: resolveAdUnitIds,
-        defaultNativeFactoryId: defaultNativeFactoryId,
+        bannerNativeFactoryId: bannerNativeFactoryId,
         expandedCollapseFactoryId: expandedCollapseFactoryId,
-        collapsedNativeFactoryId: collapsedNativeFactoryId,
         callCounter: _callCounter,
       );
 
-  /// Áp `inter_delay_time` vào cooldown có sẵn, giữ các khoảng app-open của app.
+  /// Áp các fullscreen gap của config v2 vào cooldown hiện có.
   AdsConfig _configForScript(
     AdScript script,
     AdScenarioCoordinator coordinator,
   ) {
     final base = buildAdsConfig(coordinator.buildAdUnitIds());
-    final gap = script.settings.interDelayTime;
-    if (gap == null) return base;
-
+    final gap = script.settings.gapFor(script.scenario);
     final cooldown = base.fullscreenCooldown;
     return base.withFullscreenCooldown(
       FullscreenAdCooldownConfig(
@@ -238,8 +324,12 @@ final class AdScenarioController extends ChangeNotifier {
         ignoredInterstitialPlacementKeys: {
           for (final key in gap.ignoredScenarioKeys) '$key.inter',
         },
-        appOpenInterval: cooldown.appOpenInterval,
-        interstitialAppOpenInterval: cooldown.interstitialAppOpenInterval,
+        appOpenInterval:
+            script.settings.appOpenGapFor(script.scenario) ??
+            cooldown.appOpenInterval,
+        interstitialAppOpenInterval:
+            script.settings.interstitialAppOpenGapFor(script.scenario) ??
+            cooldown.interstitialAppOpenInterval,
       ),
     );
   }
@@ -252,7 +342,41 @@ final class AdScenarioController extends ChangeNotifier {
   );
 }
 
-/// Kết quả của một lần gọi [AdScenarioController.showScenario].
+/// Giữ route loading cho đến khi SDK báo ad đã hiện hoặc lần show kết thúc.
+final class _FullscreenLoadingRoute {
+  _FullscreenLoadingRoute._(this.navigator, this.route);
+
+  final NavigatorState navigator;
+  final PageRoute<void> route;
+  bool _closed = false;
+
+  static _FullscreenLoadingRoute open(BuildContext context, Widget loading) {
+    final navigator = Navigator.of(context);
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final route = PageRouteBuilder<void>(
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+      pageBuilder: (context, animation, secondaryAnimation) => PopScope(
+        canPop: false,
+        child: Material(
+          color: backgroundColor,
+          child: SizedBox.expand(child: loading),
+        ),
+      ),
+    );
+    final session = _FullscreenLoadingRoute._(navigator, route);
+    navigator.push(route);
+    return session;
+  }
+
+  void close() {
+    if (_closed) return;
+    _closed = true;
+    if (navigator.mounted && route.isActive) navigator.removeRoute(route);
+  }
+}
+
+/// Kết quả của một lần gọi [AdScenarioController.showFullscreenAds].
 ///
 /// [fullscreenResult] là kết quả inter/app-open; [nativeAdShown] cho biết
 /// native toàn màn hình đã thực sự xuất hiện hay chưa.

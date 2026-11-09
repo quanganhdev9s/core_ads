@@ -92,13 +92,17 @@ class CoreAds {
   }
 
   /// Shows an interstitial ad for [placement] if one is ready.
-  static Future<AdResult<void>> showInterstitial(AdPlacement placement) {
+  /// [onShown] runs for this show when the SDK confirms the ad is visible.
+  static Future<AdResult<void>> showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.showInterstitial(placement);
+    return repository.showInterstitial(placement, onShown: onShown);
   }
 
   /// Shows a rewarded ad for [placement] if one is ready.
@@ -140,13 +144,17 @@ class CoreAds {
   }
 
   /// Shows an app open ad for [placement] if one is ready and valid.
-  static Future<AdResult<void>> showAppOpen(AdPlacement placement) {
+  /// [onShown] runs for this show when the SDK confirms the ad is visible.
+  static Future<AdResult<void>> showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) {
     final repository = _repository;
     if (repository == null) {
       return Future.value(const AdResult.failure(AdFailure.notReady()));
     }
 
-    return repository.showAppOpen(placement);
+    return repository.showAppOpen(placement, onShown: onShown);
   }
 
   /// Handles an app resume event for an app open ad [placement].

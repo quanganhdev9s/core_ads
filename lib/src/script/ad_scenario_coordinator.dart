@@ -6,6 +6,7 @@ import '../core/results/ad_result.dart';
 import '../app_ads.dart';
 import '../ads/native/native_ad_template.dart';
 import '../ads/native/native_ad_type.dart';
+import 'ad_config_enums.dart';
 import 'ad_script.dart';
 import 'ad_script_diagnostics.dart';
 import 'ad_scenario_keys.dart';
@@ -22,24 +23,22 @@ final class AdScenarioCoordinator {
   AdScenarioCoordinator({
     required this.script,
     required this.resolveAdUnitIds,
-    String? defaultNativeFactoryId,
+    String? bannerNativeFactoryId,
     String? expandedCollapseFactoryId,
-    String? collapsedNativeFactoryId,
     AdInterstitialCallCounter? callCounter,
-  }) : defaultNativeFactoryId =
-           defaultNativeFactoryId ?? NativeAdType.small1.factoryId,
+  }) : bannerNativeFactoryId =
+           bannerNativeFactoryId ??
+           NativeAdFactoryDefaults.bannerNative.factoryId,
        expandedCollapseFactoryId =
-           expandedCollapseFactoryId ?? NativeAdType.big4.factoryId,
-       collapsedNativeFactoryId =
-           collapsedNativeFactoryId ?? NativeAdType.small1.factoryId,
+           expandedCollapseFactoryId ??
+           NativeAdFactoryDefaults.expandedCollapse.factoryId,
        _callCounter = callCounter ?? AdInterstitialCallCounter();
 
   final AdScript script;
   final AdUnitIdResolver resolveAdUnitIds;
 
-  final String defaultNativeFactoryId;
+  final String bannerNativeFactoryId;
   final String expandedCollapseFactoryId;
-  final String collapsedNativeFactoryId;
   final AdInterstitialCallCounter _callCounter;
   // Mỗi key thiếu hoặc sai chỉ log một lần trong vòng đời coordinator.
   final Set<String> _missingKeysLogged = <String>{};
@@ -61,15 +60,6 @@ final class AdScenarioCoordinator {
   AdScenarioPlan _resolve(String key) {
     final source = script[key];
     if (source == null) {
-      if (key == 'on_resume') {
-        final mode = script.settings.onResume ?? 0;
-        return AdScenarioPlan(
-          key: key,
-          enable: mode,
-          steps: const [],
-          resumeMode: mode == 0 ? null : mode,
-        );
-      }
       if (_missingKeysLogged.add(key)) {
         logAdScriptError(key, 'Placement is missing from the script');
       }
@@ -77,15 +67,6 @@ final class AdScenarioCoordinator {
     }
     if (source.enable == 0) {
       return AdScenarioPlan(key: key, enable: source.enable, steps: const []);
-    }
-
-    if (key == 'on_resume') {
-      return AdScenarioPlan(
-        key: key,
-        enable: source.enable,
-        steps: const [],
-        resumeMode: source.enable,
-      );
     }
 
     // Parser đã hiểu `enable`; tầng này chỉ chuyển nhánh thành placement/ID.
@@ -122,71 +103,51 @@ final class AdScenarioCoordinator {
             key: '$key.$branch',
             type: type,
             nativeFactoryId: template,
+            nativeStyle: type == AdType.native
+                ? source.nativeStyle ?? script.factoryStyles[template]
+                : null,
           ),
           ids: List.unmodifiable(ids.where((id) => id.trim().isNotEmpty)),
-          refreshRate: type == AdType.native ? source.refreshRate : null,
+          refreshRate: type == AdType.native || type == AdType.banner
+              ? source.refreshRate
+              : null,
           waitTime: source.waitTime,
           stepCount: type == AdType.interstitial ? source.stepCount : null,
           collapseClickCounts:
               type == AdType.native &&
-                  ((key.startsWith('banner_') &&
-                          (source.enable == 2 || source.enable == 4)) ||
+                  ((source.configType == AdConfigType.banner &&
+                          (source.configFormat == AdConfigFormat.native ||
+                              source.configFormat ==
+                                  AdConfigFormat.nativeCollapsible)) ||
                       NativeAdTemplate.forFactory(template).isCollapsible)
               ? source.collapseClickCounts
               : const <int>{},
         ),
       );
-      final hasNativeCollapse =
-          type == AdType.native &&
-          ((key.startsWith('banner_') && source.enable == 4) ||
-              (key.startsWith('native_') &&
-                  branch == 'native' &&
-                  NativeAdTemplate.forFactory(template).isCollapsible));
-      if (hasNativeCollapse) {
-        steps.add(
-          AdScenarioStep(
-            branch: 'native_small',
-            placement: AdPlacement(
-              key: '$key.native_small',
-              type: AdType.native,
-              nativeFactoryId:
-                  NativeAdTemplate.forFactory(template).collapsedFactoryId ??
-                  collapsedNativeFactoryId,
-            ),
-            ids: List.unmodifiable(ids.where((id) => id.trim().isNotEmpty)),
-            collapseClickCounts: const <int>{},
-          ),
-        );
-      }
     }
     return AdScenarioPlan(
       key: key,
       enable: source.enable,
       steps: List.unmodifiable(steps),
+      resumeMode: key == 'on_resume' ? source.enable : null,
+      configType: source.configType,
+      format: source.configFormat,
     );
   }
 
   String _nativeFactoryIdFor(AdScriptPlacement source, String branch) {
-    if (source.key == 'native_language' || source.key == 'native_get_start') {
-      if (branch == '${source.key}1') {
-        return NativeAdType.languageStart1.factoryId;
-      }
-      if (branch == '${source.key}2') {
-        return NativeAdType.languageStart2.factoryId;
-      }
-    }
     if (source.nativeTemplate?.isNotEmpty == true) {
       return source.nativeTemplate!;
     }
     if (branch == 'native_inter' ||
         source.key == AdScenarioKeys.nativeFullOnboarding) {
-      return NativeAdType.full1.factoryId;
+      return NativeAdFactoryDefaults.fullScreen.factoryId;
     }
-    if (source.key.startsWith('banner_') &&
-        (source.enable == 2 || source.enable == 4)) {
+    if (source.configType == AdConfigType.banner &&
+        source.configFormat == AdConfigFormat.nativeCollapsible) {
       return expandedCollapseFactoryId;
     }
-    return defaultNativeFactoryId;
+    return bannerNativeFactoryId;
   }
 
   /// Gom ID của các bước hợp lệ để truyền vào [CoreAds.initialize].
@@ -203,13 +164,40 @@ final class AdScenarioCoordinator {
     return AdUnitIds.typed(values);
   }
 
-  /// Tải trước các bước đã chọn theo thứ tự trong script; không tăng step_count.
-  Future<Map<AdPlacement, AdResult<void>>> preload(String key) async {
-    final results = <AdPlacement, AdResult<void>>{};
-    for (final step in resolve(key).steps) {
-      results[step.placement] = await CoreAds.load(step.placement);
+  /// Tải song song các bước được bật của key; không tăng bộ đếm `step`.
+  /// [onlyType] chỉ tải một định dạng, ví dụ native trong kịch bản inter + native.
+  Future<Map<AdPlacement, AdResult<void>>> preload(
+    String key, {
+    AdType? onlyType,
+  }) async {
+    if (script.scenario == AdScriptScenario.off) {
+      return <AdPlacement, AdResult<void>>{};
     }
-    return results;
+    final plan = resolve(key);
+    if (!plan.isEnabled ||
+        key == AdScenarioKeys.nativeFullOnboarding &&
+            (script[key]?.pages.isEmpty ?? true)) {
+      return <AdPlacement, AdResult<void>>{};
+    }
+    final steps = plan.steps.where(
+      (step) => onlyType == null || step.placement.type == onlyType,
+    );
+    final entries = await Future.wait(
+      steps.map((step) async {
+        final placement = step.placement;
+        try {
+          return MapEntry(placement, await CoreAds.load(placement));
+        } catch (error) {
+          return MapEntry(
+            placement,
+            AdResult<void>.failure(
+              AdFailure.unknown('Could not preload ${placement.key}', error),
+            ),
+          );
+        }
+      }),
+    );
+    return Map.fromEntries(entries);
   }
 
   /// Tăng số lần gọi logic của inter và chỉ thử hiện ở nhịp `step_count`.
@@ -218,9 +206,14 @@ final class AdScenarioCoordinator {
   /// để giữ số đếm khi cập nhật script. Lần chưa đến nhịp trả
   /// `step_count_skipped`; lần đến nhịp trả kết quả show thực tế.
   /// [onBeforeShow] chỉ chạy khi ad sẵn sàng và sắp được show.
+  /// [onShown] chỉ áp dụng cho lần show này khi SDK xác nhận ad đã hiện.
+  /// [onShowStarted] chạy ngay sau khi gửi lệnh show, không đợi ad đóng.
   Future<AdResult<void>> showInterstitial(
     String key, {
     bool loadIfNeeded = false,
+    Future<AdResult<void>> Function(AdPlacement placement)? loadAd,
+    void Function()? onShown,
+    void Function(AdPlacement placement)? onShowStarted,
     Future<void> Function(AdPlacement placement)? onBeforeShow,
   }) async {
     final step = resolve(key).interstitial;
@@ -236,11 +229,16 @@ final class AdScenarioCoordinator {
         );
       }
       if (loadIfNeeded && !CoreAds.canShow(step.placement)) {
-        final loadResult = await CoreAds.load(step.placement);
+        final loadResult = await (loadAd ?? CoreAds.load)(step.placement);
         if (loadResult.isFailure) return loadResult;
       }
       if (onBeforeShow != null) await onBeforeShow(step.placement);
-      return CoreAds.showInterstitial(step.placement);
+      final showing = CoreAds.showInterstitial(
+        step.placement,
+        onShown: onShown,
+      );
+      onShowStarted?.call(step.placement);
+      return showing;
     }
     return const AdResult.failure(
       AdFailure(
@@ -271,6 +269,8 @@ final class AdScenarioPlan {
     required this.enable,
     required this.steps,
     this.resumeMode,
+    this.configType,
+    this.format,
   });
 
   final String key;
@@ -279,22 +279,30 @@ final class AdScenarioPlan {
 
   /// `1` chọn on-resume; `2` chọn luồng welcome-back.
   final int? resumeMode;
+  final AdConfigType? configType;
+  final AdConfigFormat? format;
   bool get isEnabled => steps.isNotEmpty || resumeMode != null;
 
   /// Cách dựng ad inline theo chế độ banner hoặc native collapse.
   AdInlineMode? get inlineMode {
     if (enable == 0) return null;
-    if (key.startsWith('native_') && collapsedNative != null) {
-      return AdInlineMode.collapsibleNative;
+    if (configType == AdConfigType.banner) {
+      return switch (format) {
+        AdConfigFormat.banner => AdInlineMode.banner,
+        AdConfigFormat.bannerCollapsible => AdInlineMode.adMobCollapsibleBanner,
+        AdConfigFormat.native => AdInlineMode.native,
+        AdConfigFormat.nativeCollapsible => AdInlineMode.collapsibleNative,
+        _ => null,
+      };
     }
-    if (!key.startsWith('banner_')) return null;
-    return switch (enable) {
-      1 => AdInlineMode.banner,
-      2 => AdInlineMode.collapsibleBanner,
-      3 => AdInlineMode.native,
-      4 => AdInlineMode.collapsibleNative,
-      _ => null,
-    };
+    if (configType == AdConfigType.native && native != null) {
+      return NativeAdTemplate.forFactory(
+            native!.placement.nativeFactoryId,
+          ).isCollapsible
+          ? AdInlineMode.collapsibleNative
+          : null;
+    }
+    return null;
   }
 
   AdScenarioStep? get interstitial {
@@ -327,14 +335,16 @@ final class AdScenarioPlan {
 
   AdScenarioStep? nativeForIntro(int screen) {
     for (final step in steps) {
-      if (step.branch == 'native_intro$screen') return step;
+      if (step.branch == 'native_onboarding$screen') {
+        return step;
+      }
     }
     return null;
   }
 }
 
 /// Các kiểu hiển thị tại một vị trí ad nằm trong màn hình app.
-enum AdInlineMode { banner, collapsibleBanner, native, collapsibleNative }
+enum AdInlineMode { banner, adMobCollapsibleBanner, native, collapsibleNative }
 
 /// Một bước ad cụ thể: placement, ID ứng viên và chính sách hiển thị đi kèm.
 final class AdScenarioStep {
@@ -363,6 +373,7 @@ AdType _typeForBranch(String branch) {
   if (branch.startsWith('inter')) return AdType.interstitial;
   if (branch.startsWith('banner')) return AdType.banner;
   if (branch.startsWith('native')) return AdType.native;
-  if (branch.startsWith('reward')) return AdType.rewarded;
+  if (branch == 'reward_inter') return AdType.rewardedInterstitial;
+  if (branch == 'reward') return AdType.rewarded;
   throw FormatException('Unknown ad unit branch: $branch');
 }

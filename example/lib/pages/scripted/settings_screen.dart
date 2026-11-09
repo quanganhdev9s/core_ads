@@ -17,6 +17,7 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DemoInlineAdCard(ads: ads, placementKey: DemoAdKeys.bannerSetting),
+        DemoInlineAdCard(ads: ads, placementKey: DemoAdKeys.nativeSetting),
       ],
     ),
   );

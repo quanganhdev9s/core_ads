@@ -18,8 +18,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/ad_script_demo.json
-    - assets/Ad Script version 100 A.json
-    - assets/Core Ads Test B - AOA Banner2.json
-    - assets/Core Ads Test C - Inter Banner3.json

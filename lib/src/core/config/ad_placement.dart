@@ -1,4 +1,5 @@
 import '../enums/ad_type.dart';
+import '../../ads/native/native_ad_style.dart';
 
 /// Typed identifier for an ad placement inside an app.
 ///
@@ -11,6 +12,7 @@ final class AdPlacement {
     required this.type,
     this.preloadAfterShow = false,
     this.nativeFactoryId,
+    this.nativeStyle,
   });
 
   /// Stable placement key, such as `home_top` or `level_complete`.
@@ -25,6 +27,9 @@ final class AdPlacement {
 
   /// Platform native ad factory ID used when [type] is [AdType.native].
   final String? nativeFactoryId;
+
+  /// Tuỳ biến layout native được chọn bởi [nativeFactoryId].
+  final NativeAdStyle? nativeStyle;
 
   @override
   bool operator ==(Object other) {

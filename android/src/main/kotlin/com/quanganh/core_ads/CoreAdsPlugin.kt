@@ -5,24 +5,30 @@ import io.flutter.plugin.common.MethodChannel
 
 /** Flutter plugin entry point for the package's native view implementations. */
 class CoreAdsPlugin : FlutterPlugin {
-    private var channel: MethodChannel? = null
+    private var collapsibleChannel: MethodChannel? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(binding.binaryMessenger, "core_ads/language_start_native").apply {
+        collapsibleChannel = MethodChannel(binding.binaryMessenger, "core_ads/collapsible_native").apply {
             setMethodCallHandler { call, result ->
                 val key = call.argument<String>("placementKey")
+                if (key == null) {
+                    result.error("invalid_arguments", "placementKey is required", null)
+                    return@setMethodCallHandler
+                }
                 when (call.method) {
-                    "setSelected" -> {
-                        val selected = call.argument<Boolean>("selected")
-                        if (key == null || selected == null) {
-                            result.error("invalid_arguments", "placementKey and selected are required", null)
+                    "setCollapsed" -> {
+                        val collapsed = call.argument<Boolean>("collapsed")
+                        if (collapsed == null) {
+                            result.error("invalid_arguments", "collapsed is required", null)
                         } else {
-                            NativeLanguageStartState.setSelected(key, selected)
+                            NativeCollapsibleState.setCollapsed(
+                                key, collapsed, call.argument<String>("collapsedFactoryId"),
+                            )
                             result.success(null)
                         }
                     }
                     "clear" -> {
-                        if (key != null) NativeLanguageStartState.clear(key)
+                        NativeCollapsibleState.clear(key)
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -32,8 +38,8 @@ class CoreAdsPlugin : FlutterPlugin {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel?.setMethodCallHandler(null)
-        channel = null
-        NativeLanguageStartState.clearAll()
+        collapsibleChannel?.setMethodCallHandler(null)
+        collapsibleChannel = null
+        NativeCollapsibleState.clearAll()
     }
 }

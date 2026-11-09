@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:core_ads/core_ads.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,6 +53,32 @@ void main() {
     await tester.pump();
 
     expect(repository.clearedPlacements, [_bannerA, _bannerB]);
+  });
+
+  testWidgets('AdsBanner refresh_ms reloads after the configured interval', (
+    tester,
+  ) async {
+    final repository = _FakeAdsRepository();
+    await CoreAds.initialize(_config(), repository: repository);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AdsBanner(
+            placement: _bannerA,
+            refreshRate: Duration(seconds: 2),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(repository.clearedPlacements, isEmpty);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(repository.clearedPlacements, [_bannerA]);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 3));
+    expect(repository.clearedPlacements, [_bannerA]);
   });
 
   testWidgets('AdsNative clears old placement when placement changes', (
@@ -312,6 +339,90 @@ void main() {
     expect(find.byType(AdsBanner), findsNothing);
   });
 
+  testWidgets('native collapse keeps the loaded ad when placement is shared', (
+    tester,
+  ) async {
+    final layoutCalls = <MethodCall>[];
+    const channel = MethodChannel('core_ads/collapsible_native');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      layoutCalls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      );
+    });
+    const expandedPlacement = AdPlacement(
+      key: 'collap_preview',
+      type: AdType.native,
+      nativeFactoryId: 'Collap2Expanded',
+    );
+    final repository = _FakeAdsRepository();
+    await CoreAds.initialize(
+      AdsConfig(
+        environment: AdsEnvironment.test,
+        adUnitIds: AdUnitIds({expandedPlacement: 'native-a'}),
+      ),
+      repository: repository,
+    );
+    var expanded = true;
+    Widget page() => MaterialApp(
+      home: Scaffold(
+        body: AdsCollapsibleNative(
+          nativePlacement: expandedPlacement,
+          nativeHeight: 170,
+          nativeRefreshRate: const Duration(seconds: 2),
+          expanded: expanded,
+          onCollapsed: () => expanded = false,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(page());
+    await tester.pump();
+    expect(
+      repository.loadedNativePlacements.single.nativeFactoryId,
+      'Collap2Expanded',
+    );
+
+    await tester.tap(find.byType(NativeAdCloseButton));
+    await tester.pump();
+    expect(
+      tester.getSize(find.byType(AdsCollapsibleNative)).height,
+      NativeAdType.collap2Collapsed.height,
+    );
+    expect(repository.loadedNativePlacements.length, 1);
+    expect(repository.clearedPlacements, isEmpty);
+    expect(
+      (layoutCalls.last.arguments as Map<Object?, Object?>)['collapsed'],
+      true,
+    );
+    expect(
+      (layoutCalls.last.arguments
+          as Map<Object?, Object?>)['collapsedFactoryId'],
+      'Collap2Collapsed',
+    );
+    await tester.pump(const Duration(seconds: 3));
+    expect(repository.clearedPlacements, isEmpty);
+
+    await tester.pumpWidget(page());
+    expanded = true;
+    await tester.pumpWidget(page());
+    await tester.pump();
+    expect(repository.loadedNativePlacements.length, 1);
+    expect(repository.clearedPlacements, isEmpty);
+    expect(
+      (layoutCalls.last.arguments as Map<Object?, Object?>)['collapsed'],
+      false,
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(repository.clearedPlacements, isEmpty);
+  });
+
   testWidgets(
     'collapse control stays hidden during initial and refresh loads',
     (tester) async {
@@ -351,29 +462,17 @@ void main() {
     },
   );
 
-  testWidgets('language selection updates native CTA without reloading ad', (
+  testWidgets('language selection loads a separate native placement', (
     tester,
   ) async {
     final repository = _FakeAdsRepository();
-    final calls = <MethodCall>[];
-    const channel = MethodChannel('core_ads/language_start_native');
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
-      call,
-    ) async {
-      calls.add(call);
-      return null;
-    });
-    addTearDown(() {
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        channel,
-        null,
-      );
-    });
     final controller = AdScenarioController(
       initialScript: AdScript.parse('''
-{"settings": {}, "native_language": {"enable": 1,
- "native_language1": {"name1": "LANG_1"},
- "native_language2": {"name1": "LANG_2"}}}
+{"ad_settings": {"ads_profile": 1},
+ "ad_placements": {"full": {
+   "native_language": {"enable": true, "template": "LanguageStart1"},
+   "native_language_2": {"enable": true, "template": "LanguageStart2"}
+ }}}
 '''),
       resolveAdUnitIds: (name, type) => [name],
       buildAdsConfig: (ids) =>
@@ -389,6 +488,7 @@ void main() {
         body: AdsLanguageStartNative(
           controller: controller,
           placementKey: 'native_language',
+          selectedPlacementKey: 'native_language_2',
           hasSelectedLanguage: selected,
         ),
       ),
@@ -400,9 +500,11 @@ void main() {
 
     await tester.pumpWidget(page(true));
     await tester.pump();
-    expect(repository.nativeLoadCount, 1);
-    expect(calls.where((call) => call.method == 'setSelected').length, 2);
-    expect((calls.last.arguments as Map<Object?, Object?>)['selected'], isTrue);
+    expect(repository.nativeLoadCount, 2);
+    expect(
+      tester.widget<AdsNative>(find.byType(AdsNative)).placement.key,
+      'native_language_2.native',
+    );
   });
 
   testWidgets('full-screen native close and refresh timers start on display', (
@@ -484,6 +586,138 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(repository.clearedPlacements, [_nativeA]);
   });
+
+  for (final (platform, type, textButton) in [
+    (TargetPlatform.android, NativeAdType.full1, false),
+    (TargetPlatform.android, NativeAdType.full2, false),
+    (TargetPlatform.android, NativeAdType.full3, false),
+    (TargetPlatform.android, NativeAdType.full4, false),
+    (TargetPlatform.android, NativeAdType.full5, true),
+    (TargetPlatform.iOS, NativeAdType.full1, false),
+    (TargetPlatform.iOS, NativeAdType.full2, false),
+    (TargetPlatform.iOS, NativeAdType.full3, true),
+  ]) {
+    testWidgets('${platform.name} ${type.factoryId} uses its close control', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = platform;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final placement = AdPlacement(
+        key: 'native_full',
+        type: AdType.native,
+        nativeFactoryId: type.factoryId,
+      );
+      await CoreAds.initialize(
+        AdsConfig(
+          environment: AdsEnvironment.test,
+          adUnitIds: AdUnitIds({placement: 'native-a'}),
+        ),
+        repository: _FakeAdsRepository(),
+      );
+      var closed = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdsFullScreenNative(
+              step: AdScenarioStep(
+                branch: 'native_inter',
+                placement: placement,
+                ids: const ['native-a'],
+                collapseClickCounts: const {},
+              ),
+              onClose: () => closed++,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      final backgroundColor =
+          platform == TargetPlatform.android &&
+              (type == NativeAdType.full2 || type == NativeAdType.full4)
+          ? const Color(0xFF1B1B1B)
+          : Colors.white;
+      expect(
+        find.descendant(
+          of: find.byType(AdsFullScreenNative),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is ColoredBox && widget.color == backgroundColor,
+          ),
+        ),
+        findsWidgets,
+      );
+      expect(find.text('Next'), textButton ? findsOneWidget : findsNothing);
+      expect(
+        find.byIcon(Icons.close),
+        textButton ? findsNothing : findsOneWidget,
+      );
+      final expectedColor = textButton
+          ? const Color(0xFF017FE6)
+          : const Color(0x66000000);
+      final control = find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color == expectedColor,
+      );
+      expect(control, findsOneWidget);
+      expect(
+        tester.getSize(control),
+        textButton ? const Size(56, 40) : const Size(28, 28),
+      );
+      await tester.tap(
+        textButton ? find.text('Next') : find.byIcon(Icons.close),
+      );
+      expect(closed, 1);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
+
+  testWidgets('full native uses custom card background around Safe Area', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final placement = AdPlacement(
+      key: 'native_full_custom',
+      type: AdType.native,
+      nativeFactoryId: NativeAdType.full2.factoryId,
+      nativeStyle: NativeAdStyle.fromJson({'card_bg': '#123456'}),
+    );
+    await CoreAds.initialize(
+      AdsConfig(
+        environment: AdsEnvironment.test,
+        adUnitIds: AdUnitIds({placement: 'native-a'}),
+      ),
+      repository: _FakeAdsRepository(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdsFullScreenNative(
+            step: AdScenarioStep(
+              branch: 'native_inter',
+              placement: placement,
+              ids: const ['native-a'],
+              collapseClickCounts: const {},
+            ),
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AdsFullScreenNative),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is ColoredBox && widget.color == const Color(0xFF123456),
+        ),
+      ),
+      findsWidgets,
+    );
+    debugDefaultTargetPlatformOverride = null;
+  });
 }
 
 const _bannerA = AdPlacement(key: 'banner_a', type: AdType.banner);
@@ -505,6 +739,7 @@ AdsConfig _config() {
 
 class _FakeAdsRepository implements AdsRepository {
   final List<AdPlacement> clearedPlacements = [];
+  final List<AdPlacement> loadedNativePlacements = [];
   int nativeLoadCount = 0;
   int nativeTapCount = 0;
   Future<AdResult<void>>? nextNativeLoad;
@@ -519,7 +754,10 @@ class _FakeAdsRepository implements AdsRepository {
     AdPlacement placement, {
     BannerAdConfig? bannerConfig,
   }) async {
-    if (placement.type == AdType.native) nativeLoadCount++;
+    if (placement.type == AdType.native) {
+      nativeLoadCount++;
+      loadedNativePlacements.add(placement);
+    }
     if (placement.type == AdType.native && nextNativeLoad != null) {
       final load = nextNativeLoad!;
       nextNativeLoad = null;
@@ -551,7 +789,10 @@ class _FakeAdsRepository implements AdsRepository {
   );
 
   @override
-  Future<AdResult<void>> showInterstitial(AdPlacement placement) async {
+  Future<AdResult<void>> showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     return const AdResult.failure(AdFailure.notReady());
   }
 
@@ -572,7 +813,10 @@ class _FakeAdsRepository implements AdsRepository {
   }
 
   @override
-  Future<AdResult<void>> showAppOpen(AdPlacement placement) async {
+  Future<AdResult<void>> showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     return const AdResult.failure(AdFailure.notReady());
   }
 

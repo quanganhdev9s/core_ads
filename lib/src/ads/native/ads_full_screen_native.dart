@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,8 +9,10 @@ import '../../core/enums/ad_type.dart';
 import '../../core/results/ad_failure.dart';
 import '../../script/ad_scenario_coordinator.dart';
 import 'ads_native.dart';
-import 'native_ad_corner_control.dart';
 import 'native_ad_template.dart';
+import 'native_ad_type.dart';
+import 'native_ad_close_button.dart';
+import 'native_ad_style.dart';
 
 /// Hiển thị native ad toàn màn hình của một bước trong kịch bản ads.
 ///
@@ -101,18 +104,27 @@ class _AdsFullScreenNativeState extends State<AdsFullScreenNative>
 
   @override
   Widget build(BuildContext context) {
-    final dark = NativeAdTemplate.forFactory(
-      widget.step.placement.nativeFactoryId,
-    ).dark;
-    final backgroundColor = dark
-        ? const Color(0xFF1B1B1B)
-        : const Color(0xFFFFFFFF);
+    final factoryId = widget.step.placement.nativeFactoryId;
+    final dark = NativeAdTemplate.forFactory(factoryId).dark;
+    final textClose = switch (defaultTargetPlatform) {
+      TargetPlatform.android => factoryId == NativeAdType.full5.factoryId,
+      TargetPlatform.iOS => factoryId == NativeAdType.full3.factoryId,
+      _ => false,
+    };
+    final backgroundColor =
+        _cardBackgroundColor() ??
+        (dark ? const Color(0xFF1B1B1B) : const Color(0xFFFFFFFF));
+    final darkBackground =
+        ThemeData.estimateBrightnessForColor(backgroundColor) ==
+        Brightness.dark;
     final overlayStyle =
-        (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+        (darkBackground
+                ? SystemUiOverlayStyle.light
+                : SystemUiOverlayStyle.dark)
             .copyWith(
               statusBarColor: backgroundColor,
               systemNavigationBarColor: backgroundColor,
-              systemNavigationBarIconBrightness: dark
+              systemNavigationBarIconBrightness: darkBackground
                   ? Brightness.light
                   : Brightness.dark,
             );
@@ -138,11 +150,10 @@ class _AdsFullScreenNativeState extends State<AdsFullScreenNative>
                 if (_showClose)
                   Positioned(
                     top: 0,
-                    right: 0,
-                    child: NativeAdCornerControl(
+                    right: textClose ? 12 : 0,
+                    child: NativeAdCloseButton(
                       onPressed: widget.onClose,
-                      collapse: false,
-                      dark: dark,
+                      textButton: textClose,
                       child: widget.closeButton,
                     ),
                   ),
@@ -152,6 +163,18 @@ class _AdsFullScreenNativeState extends State<AdsFullScreenNative>
         ),
       ),
     );
+  }
+
+  Color? _cardBackgroundColor() {
+    final value = widget
+        .step
+        .placement
+        .nativeStyle
+        ?.values[NativeAdStyleKeys.cardBackground];
+    if (value is! String) return null;
+    final hex = value.substring(1);
+    final color = int.parse(hex, radix: 16);
+    return Color(hex.length == 6 ? 0xFF000000 | color : color);
   }
 
   void _onNativeVisible() {

@@ -78,7 +78,7 @@ class InterstitialManager implements AdManager {
   }
 
   /// Shows the preloaded interstitial ad.
-  Future<AdResult<void>> show() async {
+  Future<AdResult<void>> show({void Function()? onShown}) async {
     if (_status != AdLoadStatus.ready) {
       return const AdResult.failure(AdFailure.notReady());
     }
@@ -95,7 +95,7 @@ class InterstitialManager implements AdManager {
 
     final AdResult<void> result;
     try {
-      result = await service.show(placement);
+      result = await service.show(placement, onShown: onShown);
     } finally {
       fullscreenAdController.release(placement);
     }

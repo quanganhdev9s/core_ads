@@ -2,24 +2,53 @@ import 'dart:convert';
 
 import '../ads/native/native_ad_template.dart';
 import '../ads/native/native_ad_type.dart';
+import '../ads/native/native_ad_style.dart';
+import 'ad_config_enums.dart';
 import 'ad_scenario_keys.dart';
 import 'ad_script_diagnostics.dart';
+
+/// Thông tin do app cung cấp để chọn bộ quảng cáo từ ads_profile.
+final class AdScriptAudience {
+  const AdScriptAudience({
+    this.isMarketingUser = false,
+    this.isTestAdDevice = false,
+    this.isPremium = false,
+  });
+
+  final bool isMarketingUser;
+  final bool isTestAdDevice;
+  final bool isPremium;
+}
+
+enum AdScriptScenario { off, full, basic }
 
 /// Bản chụp cấu hình quảng cáo sau khi đọc JSON từ Remote Config.
 ///
 /// App tự fetch và activate Remote Config. Package chỉ nhận chuỗi JSON nên
 /// không phụ thuộc dự án Firebase hoặc lịch cập nhật của từng app.
 final class AdScript {
-  AdScript._({required this.settings, required this.placements});
+  AdScript._({
+    required this.settings,
+    required this.placements,
+    required this.scenario,
+    required this.factoryStyles,
+  });
 
   final AdScriptSettings settings;
   final Map<String, AdScriptPlacement> placements;
+  final AdScriptScenario scenario;
+  final Map<String, NativeAdStyle> factoryStyles;
 
   /// Đọc JSON; key quảng cáo sai sẽ được log và tắt riêng.
   ///
   /// Chỉ JSON sai cấu trúc ở cấp toàn bộ script mới báo [FormatException]
   /// để bên gọi giữ cấu hình hợp lệ trước đó.
-  factory AdScript.parse(String source) {
+  factory AdScript.parse(
+    String source, {
+    AdScriptAudience audience = const AdScriptAudience(),
+    String? pagesJson,
+    bool useTestIds = false,
+  }) {
     final Object? decoded;
     try {
       decoded = jsonDecode(source);
@@ -31,9 +60,22 @@ final class AdScript {
     final body = root.containsKey('response')
         ? _object(root['response'], 'response')
         : root;
-    final settings = _safeSettings(body['settings']);
+    if (!body.containsKey('ad_placements')) {
+      throw const FormatException(
+        'Config v2 requires ad_placements; v1 is no longer supported',
+      );
+    }
+    final v2Settings = _object(body['ad_settings'] ?? {}, 'ad_settings');
+    final scenario = _chooseScenario(v2Settings, audience);
+    final parsedBody = _normalize(
+      body,
+      scenario,
+      pagesJson: pagesJson,
+      useTestIds: useTestIds,
+    );
+    final settings = _safeSettings(parsedBody['settings']);
     final placements = <String, AdScriptPlacement>{};
-    for (final entry in body.entries) {
+    for (final entry in parsedBody.entries) {
       if (entry.key == 'settings') continue;
       if (entry.value is! Map) {
         if (_isPlacementKey(entry.key)) {
@@ -55,10 +97,376 @@ final class AdScript {
     return AdScript._(
       settings: settings,
       placements: Map.unmodifiable(placements),
+      scenario: scenario,
+      factoryStyles: _factoryStyles(body),
     );
   }
 
   AdScriptPlacement? operator [](String key) => placements[key];
+
+  static AdScriptScenario _chooseScenario(
+    Map<String, Object?> settings,
+    AdScriptAudience audience,
+  ) {
+    if (audience.isPremium) return AdScriptScenario.off;
+    final profile =
+        _integer(settings['ads_profile'], 'ad_settings.ads_profile') ?? 1;
+    return switch (profile) {
+      0 => AdScriptScenario.off,
+      1 => AdScriptScenario.full,
+      2 =>
+        audience.isMarketingUser
+            ? AdScriptScenario.full
+            : AdScriptScenario.basic,
+      3 =>
+        audience.isTestAdDevice
+            ? AdScriptScenario.basic
+            : AdScriptScenario.full,
+      _ => throw FormatException('ad_settings.ads_profile must be 0..3'),
+    };
+  }
+
+  /// Style ghi đè của các factory có sẵn, kể cả khi placement không khai báo
+  /// `template` và coordinator chọn factory mặc định lúc chạy.
+  static Map<String, NativeAdStyle> _factoryStyles(Map<String, Object?> body) {
+    final templates = _object(
+      body[AdConfigTemplateKeys.templates] ?? {},
+      AdConfigTemplateKeys.templates,
+    );
+    final styles = <String, NativeAdStyle>{};
+    for (final name in templates.keys) {
+      if (AdConfigTemplate.fromKey(name) == null &&
+          NativeAdType.fromFactoryId(name) == null) {
+        continue;
+      }
+      try {
+        final resolved = _resolveTemplate(name, templates);
+        final style = NativeAdStyle.fromJson(resolved.overrides);
+        if (style != null) styles[resolved.factoryId] = style;
+      } on FormatException catch (error) {
+        logAdScriptError(
+          '${AdConfigTemplateKeys.templates}.$name',
+          error.message,
+        );
+      }
+    }
+    return Map.unmodifiable(styles);
+  }
+
+  static Map<String, Object?> _normalize(
+    Map<String, Object?> body,
+    AdScriptScenario scenario, {
+    String? pagesJson,
+    bool useTestIds = false,
+  }) {
+    final settings = _object(body['ad_settings'] ?? {}, 'ad_settings');
+    final all = _object(body['ad_placements'], 'ad_placements');
+    final selected = scenario == AdScriptScenario.off
+        ? <String, Object?>{}
+        : _object(all[scenario.name] ?? {}, 'ad_placements.${scenario.name}');
+    final ids = _object(body['ad_ids'] ?? {}, 'ad_ids');
+    final templates = _object(
+      body[AdConfigTemplateKeys.templates] ?? {},
+      AdConfigTemplateKeys.templates,
+    );
+    final externalPages = _object(
+      pagesJson == null ? (body['pages'] ?? {}) : jsonDecode(pagesJson),
+      'pages',
+    );
+    final result = <String, Object?>{'settings': settings};
+    for (final key in selected.keys) {
+      try {
+        final raw = _object(
+          selected[key] ?? {},
+          'ad_placements.${scenario.name}.$key',
+        );
+        final type =
+            AdConfigType.fromPlacementKey(key) ??
+            (throw FormatException('Unknown ad placement key: $key'));
+        final defaultFormat = switch (type) {
+          AdConfigType.splash || AdConfigType.inter => AdConfigFormat.inter,
+          AdConfigType.banner => AdConfigFormat.banner,
+          AdConfigType.resume => AdConfigFormat.aoa,
+          AdConfigType.native ||
+          AdConfigType.reward ||
+          AdConfigType.rewardInter => null,
+        };
+        final format = raw['format'] == null
+            ? defaultFormat
+            : AdConfigFormat.parse(raw['format'].toString());
+        if (format == null ? type.requiresFormat : !type.allows(format)) {
+          throw FormatException(
+            '$key.format ${format?.key ?? '(empty)'} is invalid for ${type.key}',
+          );
+        }
+        // Placement có mặt trong bộ được chọn mặc định là bật.
+        final enabled = _boolean(raw['enable'], '$key.enable') ?? true;
+        final pages = _pages(externalPages[key] ?? raw['pages'], 'pages.$key');
+        final templateName =
+            raw[AdConfigTemplateKeys.placementTemplate]?.toString() ??
+            _defaultTemplateName(key, type, format);
+        final template = templateName == null
+            ? null
+            : _resolveTemplate(templateName, templates);
+        final placement = <String, Object?>{
+          'enable': 0,
+          if (format != null) 'format': format.key,
+          if (template != null)
+            AdConfigTemplateKeys.resolvedTemplate: template.factoryId,
+          if (template != null && template.overrides.isNotEmpty)
+            NativeAdStyleKeys.normalizedStyle: template.overrides,
+          if (raw['step'] != null) 'step_count': raw['step'],
+          if (raw['wait_ms'] != null) 'wait_time': raw['wait_ms'],
+          if (raw['refresh_ms'] != null) 'refresh_rate': raw['refresh_ms'],
+          if (raw['open_ad_on_clicks'] != null)
+            'open_ad_on_clicks': raw['open_ad_on_clicks'],
+          if (pages.isNotEmpty) 'pages': pages,
+        };
+        if (key == 'on_resume' && format == AdConfigFormat.welcomeBack) {
+          final welcome = _object(
+            selected['native_welcome_back'] ?? {},
+            'ad_placements.${scenario.name}.native_welcome_back',
+          );
+          if (_boolean(welcome['enable'], 'native_welcome_back.enable') ==
+              false) {
+            result[key] = {'enable': 0};
+            continue;
+          }
+          final welcomeTemplate = _resolveTemplate(
+            (welcome[AdConfigTemplateKeys.placementTemplate] ??
+                    AdConfigTemplate.big1.key)
+                .toString(),
+            templates,
+          );
+          placement[AdConfigTemplateKeys.resolvedTemplate] =
+              welcomeTemplate.factoryId;
+          if (welcomeTemplate.overrides.isNotEmpty) {
+            placement[NativeAdStyleKeys.normalizedStyle] =
+                welcomeTemplate.overrides;
+          }
+          if (welcome['wait_ms'] != null) {
+            placement['wait_time'] = welcome['wait_ms'];
+          }
+        }
+        if (enabled && scenario != AdScriptScenario.off) {
+          final branches = _branches(key, type, format, pages);
+          placement['enable'] = branches.$1;
+          placement['selected_branches'] = branches.$2.keys.toList();
+          for (final unit in branches.$2.entries) {
+            final unitIds = ids[unit.value];
+            final list = unitIds is List
+                ? unitIds
+                      .whereType<String>()
+                      .where((id) => id.trim().isNotEmpty)
+                      .toList()
+                : <String>[];
+            placement[unit.key] = useTestIds || list.isEmpty
+                ? <String, Object?>{'name1': unit.value}
+                : <String, Object?>{
+                    for (var i = 0; i < list.length; i++) 'id${i + 1}': list[i],
+                  };
+          }
+        }
+        result[key] = placement;
+      } on FormatException catch (error) {
+        logAdScriptError(key, error.message);
+        result[key] = {'enable': 0};
+      }
+    }
+    if (scenario != AdScriptScenario.off &&
+        settings['splash_fallback'] == 'inter_language') {
+      final unitIds = ids['inter_language'];
+      final list = unitIds is List
+          ? unitIds
+                .whereType<String>()
+                .where((id) => id.trim().isNotEmpty)
+                .toList()
+          : <String>[];
+      result['inter_language_fallback'] = {
+        'enable': 1,
+        'format': AdConfigFormat.inter.key,
+        'selected_branches': ['inter'],
+        'inter': useTestIds || list.isEmpty
+            ? {'name1': 'inter_language'}
+            : {for (var i = 0; i < list.length; i++) 'id${i + 1}': list[i]},
+      };
+    }
+    return result;
+  }
+
+  static (int, Map<String, String>) _branches(
+    String key,
+    AdConfigType type,
+    AdConfigFormat? format,
+    List<int> pages,
+  ) {
+    if (type == AdConfigType.splash) {
+      return switch (format) {
+        AdConfigFormat.aoa => (1, {'app_open': 'aoa_splash'}),
+        AdConfigFormat.inter => (2, {'inter': 'inter_splash'}),
+        AdConfigFormat.interThenNativeFull => (
+          3,
+          {'inter': 'inter_splash', 'native_inter': 'native_inter_splash'},
+        ),
+        _ => throw FormatException('$key.format is invalid: $format'),
+      };
+    }
+    if (type == AdConfigType.inter) {
+      return switch (format) {
+        AdConfigFormat.inter => (1, {'inter': key}),
+        AdConfigFormat.nativeFull => (2, {'native_inter': 'native_$key'}),
+        AdConfigFormat.interThenNativeFull => (
+          3,
+          {'inter': key, 'native_inter': 'native_$key'},
+        ),
+        _ => throw FormatException('$key.format is invalid: $format'),
+      };
+    }
+    if (type == AdConfigType.banner) {
+      final suffix = key.startsWith('banner_')
+          ? key.substring('banner_'.length)
+          : key;
+      return switch (format) {
+        AdConfigFormat.banner ||
+        AdConfigFormat.bannerCollapsible => (1, {'banner': key}),
+        AdConfigFormat.native => (3, {'native': 'native_$suffix'}),
+        AdConfigFormat.nativeCollapsible => (
+          4,
+          {'native_collap': 'native_collap_$suffix'},
+        ),
+        _ => throw FormatException('$key.format is invalid: $format'),
+      };
+    }
+    if (type == AdConfigType.resume) {
+      return switch (format) {
+        AdConfigFormat.aoa => (1, {'app_open': key}),
+        AdConfigFormat.welcomeBack => (2, {'native': 'native_welcome_back'}),
+        _ => throw FormatException('$key.format is invalid: $format'),
+      };
+    }
+    if (type == AdConfigType.reward) {
+      return (1, {'reward': key});
+    }
+    if (type == AdConfigType.rewardInter) {
+      return (1, {'reward_inter': key});
+    }
+    if (key == 'native_onboarding') {
+      final selected = pages.isEmpty ? [1, 2, 3, 4] : pages;
+      return (
+        int.parse(selected.join()),
+        {
+          for (final i in selected)
+            'native_onboarding$i': 'native_onboarding_$i',
+        },
+      );
+    }
+    if (key == 'native_full_onboarding') {
+      return (1, {'native': key});
+    }
+    return (1, {'native': key});
+  }
+
+  static String? _defaultTemplateName(
+    String key,
+    AdConfigType type,
+    AdConfigFormat? format,
+  ) {
+    if (type == AdConfigType.native) {
+      if (key == 'native_full_onboarding') {
+        return NativeAdFactoryDefaults.fullScreen.factoryId;
+      }
+      if (key == 'native_language_small') {
+        return NativeAdFactoryDefaults.languageSmall.factoryId;
+      }
+      return NativeAdFactoryDefaults.native.factoryId;
+    }
+    if (type == AdConfigType.inter &&
+            (format == AdConfigFormat.nativeFull ||
+                format == AdConfigFormat.interThenNativeFull) ||
+        type == AdConfigType.splash &&
+            format == AdConfigFormat.interThenNativeFull) {
+      return NativeAdFactoryDefaults.fullScreen.factoryId;
+    }
+    return null;
+  }
+
+  static ({String factoryId, Map<String, Object?> overrides}) _resolveTemplate(
+    String template,
+    Map<String, Object?> customTemplates, [
+    Set<String>? visited,
+  ]) {
+    final builtIn = AdConfigTemplate.fromKey(template);
+    final defaultFactory =
+        builtIn?.factoryId ?? NativeAdType.fromFactoryId(template)?.factoryId;
+    if (!customTemplates.containsKey(template)) {
+      if (defaultFactory != null) {
+        return (factoryId: defaultFactory, overrides: {});
+      }
+      throw FormatException('Unknown native template: $template');
+    }
+    final names = visited ?? <String>{};
+    if (!names.add(template)) {
+      throw FormatException('Cyclic native template base: $template');
+    }
+    final fields = _object(
+      customTemplates[template],
+      '${AdConfigTemplateKeys.templates}.$template',
+    );
+    final base = fields[AdConfigTemplateKeys.base]?.toString().trim();
+    if ((base == null || base.isEmpty) && defaultFactory == null) {
+      throw FormatException(
+        '${AdConfigTemplateKeys.templates}.$template.${AdConfigTemplateKeys.base} is required',
+      );
+    }
+    // Mẫu có sẵn được phép cấu hình ngay dưới tên của nó, không cần base.
+    // Nếu base trùng chính tên đó, lấy factory gốc thay vì đệ quy vô hạn.
+    final ({String factoryId, Map<String, Object?> overrides}) parent;
+    if (base == null || base.isEmpty) {
+      parent = (factoryId: defaultFactory!, overrides: {});
+    } else if (base == template) {
+      if (defaultFactory == null) {
+        throw FormatException('Cyclic native template base: $template');
+      }
+      parent = (factoryId: defaultFactory, overrides: {});
+    } else {
+      parent = _resolveTemplate(base, customTemplates, names);
+    }
+    final validOverrides = NativeAdStyle.fromJson({
+      for (final entry in fields.entries)
+        if (entry.key != AdConfigTemplateKeys.base) entry.key: entry.value,
+    });
+    return (
+      factoryId: defaultFactory ?? parent.factoryId,
+      overrides: {...parent.overrides, ...?validOverrides?.values},
+    );
+  }
+
+  static int? _integer(Object? value, String path) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num && value == value.roundToDouble()) return value.toInt();
+    throw FormatException('$path must be an integer');
+  }
+
+  static bool? _boolean(Object? value, String path) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    throw FormatException('$path must be true or false');
+  }
+
+  static List<int> _pages(Object? value, String path) {
+    if (value == null) return [];
+    final list = value is List ? value : [value];
+    final pages = <int>[];
+    for (final item in list) {
+      final page = _integer(item, path);
+      if (page == null || page < 1 || page > 4 || pages.contains(page)) {
+        throw FormatException('$path must contain distinct pages 1..4');
+      }
+      pages.add(page);
+    }
+    return pages..sort();
+  }
 }
 
 /// Giữ script gần nhất khi toàn bộ JSON mới không thể phân tích.
@@ -67,14 +475,25 @@ final class AdScript {
 /// Nếu danh sách ad unit ID đã đổi, app cần khởi tạo lại CoreAds tại thời điểm
 /// an toàn vì quảng cáo đang hiển thị có thể bị giải phóng.
 final class AdScriptStore {
-  AdScriptStore(this.current);
+  AdScriptStore(
+    this.current, {
+    this.audience = const AdScriptAudience(),
+    this.useTestIds = false,
+  });
 
   AdScript current;
+  final AdScriptAudience audience;
+  final bool useTestIds;
   FormatException? lastError;
 
-  bool tryUpdate(String source) {
+  bool tryUpdate(String source, {String? pagesJson}) {
     try {
-      final next = AdScript.parse(source);
+      final next = AdScript.parse(
+        source,
+        audience: audience,
+        pagesJson: pagesJson,
+        useTestIds: useTestIds,
+      );
       current = next;
       lastError = null;
       return true;
@@ -92,60 +511,79 @@ final class AdScriptSettings {
 
   final Map<String, Object?> values;
 
-  /// Chọn kịch bản do từng app định nghĩa; không phải công tắc chung của ads.
-  int? get adsEnable =>
-      _optionalInt(values['ads_enable'], 'settings.ads_enable');
+  int? get adsProfile =>
+      _optionalInt(values['ads_profile'], 'settings.ads_profile');
 
-  /// Chọn luồng resume khi JSON không có placement `on_resume` riêng.
-  int? get onResume {
-    final value = _optionalInt(values['on_resume'], 'settings.on_resume');
-    if (value != null && (value < 0 || value > 2)) {
-      throw FormatException('settings.on_resume must be 0..2');
-    }
-    return value;
+  /// Placement bù khi Splash không hiện được ad, ví dụ `inter_language`.
+  String? get splashFallback => values['splash_fallback']?.toString();
+
+  String get languageNextStyle =>
+      values['language_next_style']?.toString() ?? 'text';
+  Duration get languageNextDelay => Duration(
+    milliseconds:
+        _optionalInt(
+          values['language_next_delay_ms'],
+          'settings.language_next_delay_ms',
+        ) ??
+        0,
+  );
+  bool get languageShowLoading => values['language_show_loading'] == true;
+
+  bool get onboardingSwipe => values['onboarding_swipe'] != false;
+  String get onboardingNextStyle =>
+      values['onboarding_next_style']?.toString() ?? 'icon';
+  String get onboardingNextPosition =>
+      values['onboarding_next_position']?.toString() ?? 'bottom';
+  Duration get onboardingNextDelay => Duration(
+    milliseconds:
+        _optionalInt(
+          values['onboarding_next_delay_ms'],
+          'settings.onboarding_next_delay_ms',
+        ) ??
+        0,
+  );
+  bool get onboardingShowDots => values['onboarding_show_dots'] != false;
+  String get onboardingFullCloseButton =>
+      values['onboarding_full_close_button']?.toString() ?? 'next';
+
+  /// Cooldown theo bộ quảng cáo v2, tính bằng mili giây.
+  AdInterstitialGapSettings gapFor(AdScriptScenario scenario) {
+    final key = scenario == AdScriptScenario.basic
+        ? 'basic_inter_gap_ms'
+        : 'full_inter_gap_ms';
+    final ms =
+        _optionalInt(values[key], 'settings.$key') ??
+        (scenario == AdScriptScenario.basic ? 90000 : 0);
+    if (ms < 0) throw FormatException('settings.$key must be non-negative');
+    final ignored = scenario == AdScriptScenario.full
+        ? _stringSet(values['full_inter_gap_ignore'])
+        : const <String>{};
+    return AdInterstitialGapSettings(
+      interval: Duration(milliseconds: ms),
+      ignoredScenarioKeys: ignored,
+    );
   }
 
-  /// Khoảng cách chung giữa các inter; `time` tính bằng mili giây.
-  AdInterstitialGapSettings? get interDelayTime {
-    final raw = values['inter_delay_time'];
-    if (raw == null) return null;
-    if (raw is! String) {
-      throw FormatException('settings.inter_delay_time must be a string');
-    }
+  /// Khoảng cách giữa hai lần hiện app-open của bộ quảng cáo đang chọn.
+  Duration? appOpenGapFor(AdScriptScenario scenario) => _optionalGapFor(
+    scenario == AdScriptScenario.basic
+        ? 'basic_open_gap_ms'
+        : 'full_open_gap_ms',
+  );
 
-    final fields = <String, String>{};
-    for (final part in raw.split(',')) {
-      final match = RegExp(
-        r'^\s*(time|ignore)\s*=\s*(.*?)\s*$',
-      ).firstMatch(part);
-      if (match == null || fields.containsKey(match.group(1))) {
-        throw FormatException('Invalid settings.inter_delay_time: $raw');
-      }
-      fields[match.group(1)!] = match.group(2)!;
-    }
-    final milliseconds = int.tryParse(fields['time'] ?? '');
-    if (milliseconds == null || milliseconds < 0) {
-      throw FormatException(
-        'settings.inter_delay_time.time must be non-negative',
+  /// Khoảng cách giữa interstitial và app-open theo cả hai chiều.
+  Duration? interstitialAppOpenGapFor(AdScriptScenario scenario) =>
+      _optionalGapFor(
+        scenario == AdScriptScenario.basic
+            ? 'basic_open_inter_gap_ms'
+            : 'full_open_inter_gap_ms',
       );
-    }
 
-    final ignored = <String>{};
-    final ignoredValue = fields['ignore'];
-    if (ignoredValue != null && ignoredValue.isNotEmpty) {
-      for (final item in ignoredValue.split('|')) {
-        final key = item.trim();
-        if (key.isEmpty || !ignored.add(key)) {
-          throw FormatException(
-            'Invalid settings.inter_delay_time.ignore: $raw',
-          );
-        }
-      }
-    }
-    return AdInterstitialGapSettings(
-      interval: Duration(milliseconds: milliseconds),
-      ignoredScenarioKeys: Set.unmodifiable(ignored),
-    );
+  Duration? _optionalGapFor(String key) {
+    final ms = _optionalInt(values[key], 'settings.$key');
+    if (ms == null) return null;
+    if (ms < 0) throw FormatException('settings.$key must be non-negative');
+    return Duration(milliseconds: ms);
   }
 
   Object? operator [](String key) => values[key];
@@ -161,17 +599,39 @@ AdScriptSettings _safeSettings(Object? raw) {
       logAdScriptError('settings', error.message, action: 'settings ignored');
     }
   }
-  for (final key in ['ads_enable', 'on_resume', 'inter_delay_time']) {
+  for (final key in [
+    'ads_profile',
+    'full_inter_gap_ms',
+    'basic_inter_gap_ms',
+    'full_open_gap_ms',
+    'basic_open_gap_ms',
+    'full_open_inter_gap_ms',
+    'basic_open_inter_gap_ms',
+  ]) {
     if (!values.containsKey(key)) continue;
     try {
       final candidate = AdScriptSettings._(values);
       switch (key) {
-        case 'ads_enable':
-          candidate.adsEnable;
-        case 'on_resume':
-          candidate.onResume;
-        case 'inter_delay_time':
-          candidate.interDelayTime;
+        case 'ads_profile':
+          candidate.adsProfile;
+        case 'full_inter_gap_ms' || 'basic_inter_gap_ms':
+          candidate.gapFor(
+            key == 'full_inter_gap_ms'
+                ? AdScriptScenario.full
+                : AdScriptScenario.basic,
+          );
+        case 'full_open_gap_ms' || 'basic_open_gap_ms':
+          candidate.appOpenGapFor(
+            key == 'full_open_gap_ms'
+                ? AdScriptScenario.full
+                : AdScriptScenario.basic,
+          );
+        case 'full_open_inter_gap_ms' || 'basic_open_inter_gap_ms':
+          candidate.interstitialAppOpenGapFor(
+            key == 'full_open_inter_gap_ms'
+                ? AdScriptScenario.full
+                : AdScriptScenario.basic,
+          );
       }
     } on FormatException catch (error) {
       logAdScriptError(
@@ -185,13 +645,7 @@ AdScriptSettings _safeSettings(Object? raw) {
   return AdScriptSettings._(Map.unmodifiable(values));
 }
 
-bool _isPlacementKey(String key) =>
-    key == 'ads_splash' ||
-    key == 'on_resume' ||
-    key.startsWith('inter_') ||
-    key.startsWith('banner_') ||
-    key.startsWith('native_') ||
-    key.startsWith('reward_');
+bool _isPlacementKey(String key) => AdConfigType.fromPlacementKey(key) != null;
 
 /// Cấu hình `inter_delay_time` đã phân tích để dùng cooldown có sẵn của package.
 final class AdInterstitialGapSettings {
@@ -215,11 +669,13 @@ final class AdScriptPlacement {
     required this.key,
     required this.enable,
     required this.units,
-    required this.values,
-    required this.introScreens,
+    required this.pages,
     required this.selectedBranches,
     required this.collapseClickCounts,
+    this.configType,
+    this.configFormat,
     this.nativeTemplate,
+    this.nativeStyle,
     this.stepCount,
     this.refreshRate,
     this.waitTime,
@@ -229,15 +685,17 @@ final class AdScriptPlacement {
     key: key,
     enable: 0,
     units: const {},
-    values: const {},
-    introScreens: const {},
+    pages: const {},
     selectedBranches: const [],
     collapseClickCounts: const {},
   );
 
   final String key;
   final int enable;
+  final AdConfigType? configType;
+  final AdConfigFormat? configFormat;
   final String? nativeTemplate;
+  final NativeAdStyle? nativeStyle;
   final int? stepCount;
 
   /// Chu kỳ làm mới native, đổi từ `refresh_rate` tính bằng mili giây.
@@ -246,26 +704,29 @@ final class AdScriptPlacement {
   /// Thời gian chờ của native toàn màn hình, đổi từ `wait_time` mili giây.
   final Duration? waitTime;
 
-  /// Các màn intro được chọn; `enable=24` tương ứng màn 2 và 4.
-  final Set<int> introScreens;
-
   /// Danh sách nhánh đã được chọn và kiểm tra theo `enable` đúng một lần.
   final List<String> selectedBranches;
 
-  /// Nhánh đã chọn của placement thuộc nhóm `native_*`.
+  /// Nhánh đã chọn của placement native.
   List<String> get selectedNativeBranches =>
-      key.startsWith('native_') ? selectedBranches : const <String>[];
+      configType == AdConfigType.native ? selectedBranches : const <String>[];
 
   /// Số thứ tự các lần bấm collapse cần bỏ qua; widget giữ bộ đếm thực tế.
   final Set<int> collapseClickCounts;
   final Map<String, AdScriptUnit> units;
-  final Map<String, Object?> values;
+
+  /// Trang onboarding được chọn trong config v2, tách khỏi enable.
+  final Set<int> pages;
 
   AdScriptUnit? unit(String branch) => units[branch];
 
   /// Đổi một placement trong JSON thành dữ liệu có kiểu để coordinator dùng.
   static AdScriptPlacement _parse(String key, Map<String, Object?> values) {
     final enable = _optionalInt(values['enable'], '$key.enable') ?? 0;
+    final configType = AdConfigType.fromPlacementKey(key);
+    final configFormat = values['format'] == null
+        ? null
+        : AdConfigFormat.parse(values['format'].toString());
 
     final units = <String, AdScriptUnit>{};
     for (final entry in values.entries) {
@@ -273,15 +734,17 @@ final class AdScriptPlacement {
       final fields = _object(entry.value, '$key.${entry.key}');
       units[entry.key] = AdScriptUnit._parse(fields);
     }
-    final selection = _selectBranches(key, enable, units);
-    if (selection.error case final error?) {
-      logAdScriptError(key, error);
-      return AdScriptPlacement._disabled(key);
+    final selected = values['selected_branches'];
+    if (enable > 0 && selected is! List) {
+      throw FormatException('$key.selected_branches is required');
     }
-    final selectedBranches = selection.branches;
+    final selectedBranches = selected is List
+        ? List<String>.unmodifiable(selected.map((branch) => branch.toString()))
+        : const <String>[];
 
     if (key == AdScenarioKeys.nativeFullOnboarding && enable > 0) {
-      final template = values['native_template']?.toString();
+      final template = values[AdConfigTemplateKeys.resolvedTemplate]
+          ?.toString();
       if (template != null &&
           !NativeAdType.values.any(
             (type) =>
@@ -324,7 +787,17 @@ final class AdScriptPlacement {
     return AdScriptPlacement._(
       key: key,
       enable: enable,
-      nativeTemplate: values['native_template']?.toString(),
+      configType: configType,
+      configFormat: configFormat,
+      nativeTemplate: values[AdConfigTemplateKeys.resolvedTemplate]?.toString(),
+      nativeStyle: values[NativeAdStyleKeys.normalizedStyle] is Map
+          ? NativeAdStyle.fromJson(
+              _object(
+                values[NativeAdStyleKeys.normalizedStyle],
+                '$key.${NativeAdStyleKeys.normalizedStyle}',
+              ),
+            )
+          : null,
       stepCount: stepCount,
       refreshRate: refreshMilliseconds == null
           ? null
@@ -332,26 +805,47 @@ final class AdScriptPlacement {
       waitTime: waitMilliseconds == null
           ? null
           : Duration(milliseconds: waitMilliseconds),
-      introScreens: key == 'native_intro'
-          ? Set.unmodifiable(
-              selectedBranches.map(
-                (branch) => int.parse(branch.substring(key.length)),
-              ),
-            )
-          : const <int>{},
       selectedBranches: List.unmodifiable(selectedBranches),
       collapseClickCounts:
-          (key.startsWith('banner_') && (enable == 2 || enable == 4)) ||
-              (key.startsWith('native_') &&
+          (configType == AdConfigType.banner &&
+                  (configFormat == AdConfigFormat.native ||
+                      configFormat == AdConfigFormat.nativeCollapsible)) ||
+              (configType == AdConfigType.native &&
                   NativeAdTemplate.forFactory(
-                    values['native_template']?.toString(),
+                    values[AdConfigTemplateKeys.resolvedTemplate]?.toString(),
                   ).isCollapsible)
-          ? _collapseTapCounts(values['collap_config'], '$key.collap_config')
+          ? _collapseTapCounts(
+              values['open_ad_on_clicks'],
+              '$key.open_ad_on_clicks',
+            )
           : const <int>{},
       units: Map.unmodifiable(units),
-      values: Map.unmodifiable(values),
+      pages: _pageSet(values['pages'], '$key.pages'),
     );
   }
+}
+
+Set<String> _stringSet(Object? value) {
+  if (value == null) return const <String>{};
+  final parts = value is List ? value : value.toString().split(',');
+  return Set.unmodifiable(
+    parts
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty),
+  );
+}
+
+Set<int> _pageSet(Object? value, String path) {
+  if (value == null) return const <int>{};
+  if (value is! List) throw FormatException('$path must be a list');
+  final pages = <int>{};
+  for (final item in value) {
+    final page = _positiveInt(item, path);
+    if (page > 4 || !pages.add(page)) {
+      throw FormatException('$path must contain distinct pages 1..4');
+    }
+  }
+  return Set.unmodifiable(pages);
 }
 
 /// Tên quảng cáo hoặc ad unit ID của một nhánh trong JSON.
@@ -386,155 +880,6 @@ final class AdScriptUnit {
   }
 }
 
-/// Kết quả chọn nhánh: danh sách hợp lệ hoặc lỗi dữ liệu, không ném exception.
-final class _BranchSelection {
-  const _BranchSelection.valid(this.branches) : error = null;
-  const _BranchSelection.invalid(this.error) : branches = const [];
-
-  final List<String> branches;
-  final String? error;
-}
-
-/// Một nơi duy nhất diễn giải `enable` thành danh sách nhánh cho mọi nhóm ad.
-_BranchSelection _selectBranches(
-  String key,
-  int enable,
-  Map<String, AdScriptUnit> units,
-) {
-  if (enable < 0) {
-    return _BranchSelection.invalid('$key.enable must be non-negative');
-  }
-
-  if (key == 'ads_splash') {
-    return switch (enable) {
-      0 => const _BranchSelection.valid([]),
-      1 => const _BranchSelection.valid(['app_open']),
-      2 => const _BranchSelection.valid(['inter']),
-      3 => const _BranchSelection.valid(['inter', 'native_inter']),
-      _ => _BranchSelection.invalid('$key.enable must be 0..3'),
-    };
-  }
-  if (key.startsWith('inter_')) {
-    return switch (enable) {
-      0 => const _BranchSelection.valid([]),
-      1 => const _BranchSelection.valid(['inter']),
-      2 => const _BranchSelection.valid(['native_inter']),
-      3 => const _BranchSelection.valid(['inter', 'native_inter']),
-      _ => _BranchSelection.invalid('$key.enable must be 0..3'),
-    };
-  }
-  if (key.startsWith('banner_')) {
-    return switch (enable) {
-      0 => const _BranchSelection.valid([]),
-      1 => const _BranchSelection.valid(['banner']),
-      2 => const _BranchSelection.valid(['native', 'banner_collap']),
-      3 => const _BranchSelection.valid(['native']),
-      4 => _BranchSelection.valid([
-        units.containsKey('native_collap') ? 'native_collap' : 'native',
-      ]),
-      _ => _BranchSelection.invalid('$key.enable must be 0..4'),
-    };
-  }
-  if (key == 'on_resume') {
-    if (enable > 2) {
-      return _BranchSelection.invalid('$key.enable must be 0..2');
-    }
-    return const _BranchSelection.valid([]);
-  }
-  if (key == 'native_language' || key == 'native_get_start') {
-    return switch (enable) {
-      0 => const _BranchSelection.valid([]),
-      1 => _BranchSelection.valid(['${key}1']),
-      2 => _BranchSelection.valid(['${key}2']),
-      _ => _BranchSelection.invalid('$key.enable must be 0, 1 or 2'),
-    };
-  }
-  if (key == AdScenarioKeys.nativeFullOnboarding) {
-    return enable == 0
-        ? const _BranchSelection.valid([])
-        : const _BranchSelection.valid(['native']);
-  }
-  if (key == 'native_intro' && enable > 0) {
-    final screens = enable.toString().split('');
-    if (screens.any((screen) => !'1234'.contains(screen)) ||
-        screens.toSet().length != screens.length) {
-      return _BranchSelection.invalid(
-        '$key.enable must contain distinct screen numbers from 1..4',
-      );
-    }
-  }
-  if (key.startsWith('native_')) {
-    return _selectNativeBranches(key, enable, units);
-  }
-  if (enable == 0) return const _BranchSelection.valid([]);
-  if (enable == 1 && units.length == 1) {
-    return _BranchSelection.valid([units.keys.single]);
-  }
-  return _BranchSelection.invalid(
-    '$key requires enable=1 and one ad branch; no scenario rule is defined',
-  );
-}
-
-/// Một native dùng `0/1`; nhiều native đánh số dùng từng chữ số của `enable`.
-/// `native_language` và `native_get_start` được xử lý riêng ở trên: chỉ `0/1/2`.
-_BranchSelection _selectNativeBranches(
-  String key,
-  int enable,
-  Map<String, AdScriptUnit> units,
-) {
-  if (!key.startsWith('native_')) {
-    return const _BranchSelection.valid([]);
-  }
-  if (enable == 0) return const _BranchSelection.valid([]);
-
-  final branches = units.keys
-      .where((branch) => branch.startsWith('native'))
-      .toList();
-  if (branches.isEmpty) {
-    return _BranchSelection.invalid(
-      '$key requires native branches for enable=$enable',
-    );
-  }
-  final numberedBranch = RegExp('^${RegExp.escape(key)}([1-9])\$');
-  if (branches.length == 1 && !numberedBranch.hasMatch(branches.single)) {
-    if (enable > 1) {
-      return _BranchSelection.invalid(
-        '$key.enable must be 0 or 1 for a single native',
-      );
-    }
-    return _BranchSelection.valid(enable == 1 ? branches : const []);
-  }
-
-  if (branches.any((branch) => !numberedBranch.hasMatch(branch))) {
-    return _BranchSelection.invalid('$key must use numbered native branches');
-  }
-  final selected = <int>{};
-  for (final character in enable.toString().split('')) {
-    final digit = int.tryParse(character);
-    if (digit == null || digit < 1 || digit > 9 || !selected.add(digit)) {
-      return _BranchSelection.invalid(
-        '$key.enable contains an invalid or repeated digit',
-      );
-    }
-  }
-  for (final number in selected) {
-    if (!units.containsKey('$key$number')) {
-      return _BranchSelection.invalid(
-        '$key$number is required for enable=$enable',
-      );
-    }
-  }
-  final chosen =
-      branches
-          .where(
-            (branch) =>
-                selected.contains(int.tryParse(branch.substring(key.length))),
-          )
-          .toList()
-        ..sort();
-  return _BranchSelection.valid(chosen);
-}
-
 Map<String, Object?> _object(Object? value, String path) {
   if (value is! Map) throw FormatException('$path must be a JSON object');
   final result = <String, Object?>{};
@@ -558,7 +903,11 @@ int _positiveInt(Object? value, String path) {
 
 Set<int> _collapseTapCounts(Object? value, String path) {
   if (value == null) return const <int>{};
-  final parts = value is String ? value.split('/') : <Object?>[value];
+  final parts = value is String
+      ? value.split(RegExp(r'[/,]'))
+      : value is List
+      ? value
+      : <Object?>[value];
   final counts = <int>{};
   for (final part in parts) {
     final count = _positiveInt(part, path);

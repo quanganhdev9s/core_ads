@@ -22,9 +22,19 @@ public final class CoreAdsNativeFactory: NSObject {
     _ nativeAd: NativeAd,
     customOptions: [AnyHashable: Any]? = nil
   ) -> NativeAdView? {
-    NativeAdLayouts().build(
+    let placementKey = customOptions?["placementKey"] as? String
+    let style = NativeAdStyle(options: customOptions?[NativeAdStyleKeys.factoryOption])
+    let layouts = NativeAdLayouts()
+    let view = layouts.build(
       template, ad: nativeAd,
-      placementKey: customOptions?["placementKey"] as? String
+      placementKey: placementKey, style: style
     )
+    if let placementKey {
+      NativeCollapsibleState.shared.bind(
+        placementKey, view: view, ad: nativeAd, template: template, layouts: layouts,
+        style: style
+      )
+    }
+    return view
   }
 }

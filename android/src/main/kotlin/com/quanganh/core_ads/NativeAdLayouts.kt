@@ -33,10 +33,16 @@ internal class NativeAdLayouts(private val context: Context) {
         layoutParams = match(dp(value))
     }
 
-    fun build(template: NativeAdTemplate, ad: NativeAd, placementKey: String? = null): NativeAdView {
+    fun build(template: NativeAdTemplate, ad: NativeAd, placementKey: String? = null, style: NativeAdStyle? = null): NativeAdView {
+        val root = NativeAdView(context)
+        render(root, template, ad, placementKey, style)
+        return root
+    }
+
+    fun render(root: NativeAdView, template: NativeAdTemplate, ad: NativeAd, placementKey: String? = null, style: NativeAdStyle? = null) {
+        root.removeAllViews()
         val dark = template == NativeAdTemplate.Full2 || template == NativeAdTemplate.Full4
         val elements = NativeAdElements(context, ad, dark)
-        val root = NativeAdView(context)
         val content = when (template) {
             NativeAdTemplate.Tiny1 -> tiny(elements, circle = false)
             NativeAdTemplate.Tiny2 -> tiny(elements, circle = true)
@@ -57,8 +63,8 @@ internal class NativeAdLayouts(private val context: Context) {
             NativeAdTemplate.Big7 -> big(elements, 7)
             NativeAdTemplate.Big8 -> big(elements, 8)
             NativeAdTemplate.Big9 -> big(elements, 9)
-            NativeAdTemplate.LanguageStart1 -> languageStart(elements, 1, placementKey)
-            NativeAdTemplate.LanguageStart2 -> languageStart(elements, 2, placementKey)
+            NativeAdTemplate.LanguageStart1 -> languageStart(elements, 1)
+            NativeAdTemplate.LanguageStart2 -> languageStart(elements, 2)
             NativeAdTemplate.Full1 -> full(elements, 1)
             NativeAdTemplate.Full2 -> full(elements, 2)
             NativeAdTemplate.Full3 -> full(elements, 3)
@@ -76,7 +82,7 @@ internal class NativeAdLayouts(private val context: Context) {
             else ViewGroup.LayoutParams.WRAP_CONTENT,
         ))
         elements.bind(root)
-        return root
+        style?.apply(context, root, template)
     }
 
     private fun media(elements: NativeAdElements): View =
@@ -92,10 +98,10 @@ internal class NativeAdLayouts(private val context: Context) {
     private fun languageStart(
         elements: NativeAdElements,
         variant: Int,
-        placementKey: String?,
     ) = NativeAdDesign.card(context).apply {
         val button = elements.cta() as TextView
         if (variant == 2) {
+            button.background = NativeAdDesign.background(context, NativeAdDesign.languageStartUnselectedCta, NativeAdDesign.buttonRadius)
             addView(button, match(dp(NativeAdDesign.buttonHeight)))
             addView(gap())
         }
@@ -115,9 +121,6 @@ internal class NativeAdLayouts(private val context: Context) {
                     Gravity.END or Gravity.CENTER_VERTICAL,
                 ))
             }, match(dp(NativeAdDesign.buttonHeight)))
-        }
-        if (placementKey != null) {
-            NativeLanguageStartState.bind(placementKey, button, variant)
         }
     }
 
@@ -207,6 +210,12 @@ internal class NativeAdLayouts(private val context: Context) {
 
     private fun tiny(elements: NativeAdElements, circle: Boolean) =
         NativeAdDesign.card(context).apply {
+            if (circle) {
+                // Match the Flutter 74 dp slot after each dp value is rounded to pixels.
+                val verticalSpace = dp(NativeAdDesign.tiny2Height) - dp(NativeAdDesign.buttonHeight)
+                val topInset = verticalSpace / 2
+                setPadding(paddingLeft, topInset, paddingRight, verticalSpace - topInset)
+            }
             addView(CtaWidthRow(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -230,7 +239,13 @@ internal class NativeAdLayouts(private val context: Context) {
     private fun collapsible(elements: NativeAdElements, variant: Int) =
         NativeAdDesign.card(context).apply {
             // The Flutter AdsCollapsibleNative widget owns the collapse interaction.
-            addView(View(context), match(dp(28)))
+            if (variant == 3) {
+                addView(elements.textColumn(showBody = false).apply {
+                    setPadding(0, 0, dp(40), 0)
+                }, match(dp(28)))
+            } else {
+                addView(View(context), match(dp(28)))
+            }
             addView(gap())
             if (variant == 2) {
                 addView(elements.cta(), match(dp(NativeAdDesign.buttonHeight)))
@@ -270,6 +285,13 @@ internal class NativeAdLayouts(private val context: Context) {
         ).apply {
             val mediaArea = FrameLayout(context)
             val media = elements.media()
+            if (variant == 2 || variant == 4) {
+                // FIT_CENTER leaves unused space inside MediaView around the ad image.
+                // Keep that space the same color as the dark full-screen panel.
+                media.background = NativeAdDesign.background(
+                    context, NativeAdDesign.darkBackground, NativeAdDesign.mediaRadius,
+                )
+            }
             when (variant) {
                 1, 5 -> mediaArea.addView(media, FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,

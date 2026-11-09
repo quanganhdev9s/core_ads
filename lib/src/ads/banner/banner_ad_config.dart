@@ -28,6 +28,7 @@ class BannerAdConfig {
     this.size = BannerAdSize.banner,
     this.width,
     this.height,
+    this.collapsible = false,
   });
 
   /// Creates a standard 320x50 banner config.
@@ -60,8 +61,22 @@ class BannerAdConfig {
       return this;
     }
 
-    return BannerAdConfig.anchoredAdaptive(width: width, height: height);
+    return BannerAdConfig(
+      size: BannerAdSize.anchoredAdaptive,
+      width: width,
+      height: height,
+      collapsible: collapsible,
+    );
   }
+
+  BannerAdConfig withCollapsible(bool enabled) => BannerAdConfig(
+    size: enabled && size == BannerAdSize.banner
+        ? BannerAdSize.anchoredAdaptive
+        : size,
+    width: width,
+    height: height,
+    collapsible: enabled,
+  );
 
   /// Fixed banner size used by the ad network.
   final BannerAdSize size;
@@ -71,6 +86,9 @@ class BannerAdConfig {
 
   /// Optional widget height override used by loading/error placeholders.
   final double? height;
+
+  /// Gửi yêu cầu banner AdMob dạng collapsible (neo phía dưới).
+  final bool collapsible;
 
   /// Default logical width for the configured fixed size.
   double get defaultWidth {
@@ -128,9 +146,10 @@ class BannerAdConfig {
         other is BannerAdConfig &&
             other.size == size &&
             other.width == width &&
-            other.height == height;
+            other.height == height &&
+            other.collapsible == collapsible;
   }
 
   @override
-  int get hashCode => Object.hash(size, width, height);
+  int get hashCode => Object.hash(size, width, height, collapsible);
 }

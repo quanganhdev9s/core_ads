@@ -8,6 +8,7 @@ import '../ads/native/native_ad_template.dart';
 import '../core/enums/ad_type.dart';
 import '../script/ad_scenario_controller.dart';
 import '../script/ad_scenario_coordinator.dart';
+import '../script/ad_script_diagnostics.dart';
 
 /// Renders one inline ad location according to the active Remote Config script.
 ///
@@ -44,6 +45,8 @@ class CoreAdSlot extends StatefulWidget {
 }
 
 class _CoreAdSlotState extends State<CoreAdSlot> {
+  final Set<String> _reportedInvalidPlans = {};
+
   @override
   void initState() {
     super.initState();
@@ -72,25 +75,21 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
     if (!widget.controller.isInitialized) return const SizedBox.shrink();
     final plan = widget.controller.resolve(widget.placementKey);
     if (!plan.isEnabled) return const SizedBox.shrink();
+    if (!_canRenderInline(plan)) {
+      return _hideInvalidPlan(plan);
+    }
     final screenSize = MediaQuery.sizeOf(context);
 
     final Widget ad = switch (plan.inlineMode) {
       AdInlineMode.banner => AdsBanner(
         placement: plan.banner!.placement,
         config: widget.bannerConfig,
+        refreshRate: plan.banner!.refreshRate,
       ),
-      AdInlineMode.collapsibleBanner => AdsCollapsibleNative(
-        nativePlacement: plan.native!.placement,
-        bannerPlacement: plan.banner!.placement,
-        nativeHeight: _nativeHeight(plan.native!, screenSize),
-        nativeRefreshRate: plan.native!.refreshRate,
-        bannerConfig: widget.bannerConfig,
-        collapseClickCounts: plan.native!.collapseClickCounts,
-        expanded: widget.expanded,
-        closeButton: widget.closeButton,
-        onCollapsed: widget.onCollapsed,
-        nativeClearOnDispose: false,
-        bannerClearOnDispose: false,
+      AdInlineMode.adMobCollapsibleBanner => AdsBanner(
+        placement: plan.banner!.placement,
+        config: widget.bannerConfig.withCollapsible(true),
+        refreshRate: plan.banner!.refreshRate,
       ),
       AdInlineMode.native => AdsNative(
         placement: plan.native!.placement,
@@ -99,18 +98,10 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
       ),
       AdInlineMode.collapsibleNative => AdsCollapsibleNative(
         nativePlacement: plan.native!.placement,
-        collapsedNativePlacement: plan.collapsedNative!.placement,
+        collapsedFactoryId: widget.controller.collapsedNativeFactoryId,
         nativeHeight: _nativeHeight(plan.native!, screenSize),
         nativeRefreshRate: plan.native!.refreshRate,
-        collapsedNativeHeight:
-            widget.collapsedNativeHeight ??
-            NativeAdTemplate.forFactory(
-              plan.collapsedNative!.placement.nativeFactoryId,
-            ).heightForScreen(
-              screenSize.height,
-              screenWidth: screenSize.width,
-            ) ??
-            80,
+        collapsedNativeHeight: widget.collapsedNativeHeight,
         collapseClickCounts: plan.native!.collapseClickCounts,
         expanded: widget.expanded,
         closeButton: widget.closeButton,
@@ -124,12 +115,6 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
   }
 
   Widget _singleFormatAd(AdScenarioPlan plan, Size screenSize) {
-    if (plan.steps.length != 1) {
-      throw FlutterError(
-        'CoreAdSlot needs exactly one inline step for ${plan.key}. '
-        'Use the scenario presenter for a full-screen sequence.',
-      );
-    }
     final step = plan.steps.single;
     return switch (step.placement.type) {
       AdType.banner => AdsBanner(
@@ -141,10 +126,40 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
         height: _nativeHeight(step, screenSize),
         refreshRate: step.refreshRate,
       ),
-      _ => throw FlutterError(
-        'CoreAdSlot cannot render ${step.placement.type.name} inline.',
-      ),
+      _ => const SizedBox.shrink(),
     };
+  }
+
+  bool _canRenderInline(AdScenarioPlan plan) => switch (plan.inlineMode) {
+    AdInlineMode.banner ||
+    AdInlineMode.adMobCollapsibleBanner => plan.banner != null,
+    AdInlineMode.native || AdInlineMode.collapsibleNative =>
+      plan.native != null && _isInlineNative(plan.native!),
+    null =>
+      plan.steps.length == 1 &&
+          (plan.steps.single.placement.type == AdType.native &&
+                  _isInlineNative(plan.steps.single) ||
+              plan.steps.single.placement.type == AdType.banner) &&
+          plan.steps.single.branch != 'native_inter',
+  };
+
+  bool _isInlineNative(AdScenarioStep step) =>
+      NativeAdTemplate.forFactory(
+        step.placement.nativeFactoryId,
+      ).skeletonKind !=
+      NativeAdSkeletonKind.full;
+
+  Widget _hideInvalidPlan(AdScenarioPlan plan) {
+    final reportKey = '${widget.controller.revision}:${plan.key}';
+    if (_reportedInvalidPlans.add(reportKey)) {
+      logAdScriptError(
+        plan.key,
+        'CoreAdSlot cannot render this plan inline; use showFullscreenAds for '
+        'fullscreen ads or check this placement config',
+        action: 'inline ad hidden',
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   double _nativeHeight(AdScenarioStep step, Size screenSize) =>

@@ -41,9 +41,15 @@ private class CoreAdsNativeFactory(
     override fun createNativeAd(
         nativeAd: NativeAd,
         customOptions: MutableMap<String, Any>?,
-    ): NativeAdView = layouts.build(
-        template,
-        nativeAd,
-        customOptions?.get("placementKey") as? String,
-    )
+    ): NativeAdView {
+        val placementKey = customOptions?.get("placementKey") as? String
+        val style = NativeAdStyle.fromOptions(
+            customOptions?.get(NativeAdStyleKeys.factoryOption),
+        )
+        val view = layouts.build(template, nativeAd, placementKey, style)
+        if (placementKey != null) {
+            NativeCollapsibleState.bind(placementKey, view, nativeAd, template, layouts, style)
+        }
+        return view
+    }
 }

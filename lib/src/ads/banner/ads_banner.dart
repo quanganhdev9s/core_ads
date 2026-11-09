@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../../core/config/ad_placement.dart';
@@ -19,6 +21,7 @@ class AdsBanner extends StatefulWidget {
     this.error,
     this.errorBuilder,
     this.config = const BannerAdConfig.banner(),
+    this.refreshRate,
     this.showRetryButton = false,
     this.onLoaded,
     this.onFailed,
@@ -42,6 +45,9 @@ class AdsBanner extends StatefulWidget {
   /// Banner placeholder configuration.
   final BannerAdConfig config;
 
+  /// Tải lại banner sau khoảng này; null hoặc Duration.zero sẽ không tự tải.
+  final Duration? refreshRate;
+
   /// Whether to show a small default retry button when loading fails.
   final bool showRetryButton;
 
@@ -63,6 +69,7 @@ class _AdsBannerState extends State<AdsBanner> {
   BannerAdConfig? _resolvedConfig;
   BannerAdConfig? _scheduledLoadConfig;
   int _loadToken = 0;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -77,6 +84,7 @@ class _AdsBannerState extends State<AdsBanner> {
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     AdsReloadNotifier.instance.removePlacementListener(_handlePlacementReload);
     AdsReloadNotifier.instance.removeTypeListener(_handleTypeReload);
     if (widget.clearOnDispose) {
@@ -93,7 +101,10 @@ class _AdsBannerState extends State<AdsBanner> {
       CoreAds.clear(oldWidget.placement);
     }
 
-    if (placementChanged || oldWidget.config != widget.config) {
+    if (placementChanged ||
+        oldWidget.config != widget.config ||
+        oldWidget.refreshRate != widget.refreshRate) {
+      _refreshTimer?.cancel();
       _resolvedConfig = null;
       _scheduledLoadConfig = null;
       if (widget.config.needsResolvedWidth) {
@@ -165,7 +176,22 @@ class _AdsBannerState extends State<AdsBanner> {
           widget.onFailed?.call(failure);
       }
 
+      _scheduleRefresh(config);
+
       return result;
+    });
+  }
+
+  void _scheduleRefresh(BannerAdConfig config) {
+    _refreshTimer?.cancel();
+    final rate = widget.refreshRate;
+    if (rate == null || rate <= Duration.zero) return;
+    _refreshTimer = Timer(rate, () {
+      if (!mounted || _resolvedConfig != config) return;
+      CoreAds.clear(widget.placement);
+      setState(() {
+        _loadFuture = _load(config);
+      });
     });
   }
 

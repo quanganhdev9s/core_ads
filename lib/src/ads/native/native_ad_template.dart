@@ -67,6 +67,9 @@ final class NativeAdTemplate {
       NativeAdType.tiny1 ||
       NativeAdType.collap1Collapsed ||
       NativeAdType.collap3Collapsed => NativeAdSkeletonKind.tiny,
+      NativeAdType.collap2Collapsed
+          when defaultTargetPlatform == TargetPlatform.iOS =>
+        NativeAdSkeletonKind.tiny,
       NativeAdType.tiny2 ||
       NativeAdType.collap2Collapsed => NativeAdSkeletonKind.tinyCircle,
       NativeAdType.small1 ||
@@ -98,7 +101,10 @@ final class NativeAdTemplate {
     return NativeAdTemplate._(
       type,
       skeletonKind,
-      dark: type == NativeAdType.full2 || type == NativeAdType.full4,
+      dark:
+          type == NativeAdType.full4 ||
+          type == NativeAdType.full2 &&
+              defaultTargetPlatform == TargetPlatform.android,
     );
   }
 }

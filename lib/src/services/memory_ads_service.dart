@@ -55,7 +55,10 @@ class MemoryAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> show(AdPlacement placement) async {
+  Future<AdResult<void>> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     if (!_isInitialized) {
       return const AdResult.failure(
         AdFailure(
@@ -72,6 +75,7 @@ class MemoryAdsService implements AdsService {
 
     _statuses[placement] = AdLoadStatus.idle;
     _logger.log('${placement.key} shown by memory service');
+    onShown?.call();
 
     return const AdResult.success(null);
   }

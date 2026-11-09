@@ -29,7 +29,7 @@ class DemoScreenScaffold extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Config: ${ads.fixture.label}'),
+              child: const Text('Config: v2 · full/basic'),
             ),
           ),
           Expanded(
@@ -102,11 +102,7 @@ class _DemoInlineAdCardState extends State<DemoInlineAdCard> {
   Widget build(BuildContext context) {
     final plan = widget.ads.scenarios.resolve(widget.placementKey);
     final nativeSteps = plan.steps
-        .where(
-          (step) =>
-              step.placement.type == AdType.native &&
-              step.branch != 'native_small',
-        )
+        .where((step) => step.placement.type == AdType.native)
         .toList();
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -133,15 +129,14 @@ class _DemoInlineAdCardState extends State<DemoInlineAdCard> {
             else
               CoreAdSlot(
                 key: ValueKey(
-                  '${widget.ads.fixture.name}-${widget.placementKey}',
+                  '${widget.ads.ads.revision}-${widget.placementKey}',
                 ),
                 controller: widget.ads.ads,
                 placementKey: widget.placementKey,
                 expanded: expanded,
                 onCollapsed: () => setState(() => expanded = false),
               ),
-            if (plan.inlineMode == AdInlineMode.collapsibleBanner ||
-                plan.inlineMode == AdInlineMode.collapsibleNative)
+            if (plan.inlineMode == AdInlineMode.collapsibleNative)
               OutlinedButton(
                 onPressed: () => setState(() => expanded = true),
                 child: const Text('Expand again'),
@@ -168,7 +163,7 @@ class DemoNativeStepCard extends StatelessWidget {
         children: [
           Text('${step.placement.key} · ${step.placement.nativeFactoryId}'),
           AdsNative(
-            key: ValueKey('${ads.fixture.name}-${step.placement.key}'),
+            key: ValueKey('${ads.ads.revision}-${step.placement.key}'),
             placement: step.placement,
             height:
                 NativeAdTemplate.forFactory(
@@ -230,7 +225,7 @@ class DemoScenarioAction extends StatelessWidget {
             FilledButton.tonal(
               onPressed: ads.isBusy
                   ? null
-                  : () => ads.showScenario(context, keyName),
+                  : () => ads.showFullscreenAds(context, keyName),
               child: Text('Run $keyName'),
             ),
           ],

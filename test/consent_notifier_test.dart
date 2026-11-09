@@ -133,7 +133,10 @@ class _FakeAdsService implements AdsService {
   }
 
   @override
-  Future<AdResult<void>> show(AdPlacement placement) async {
+  Future<AdResult<void>> show(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     return const AdResult.success(null);
   }
 

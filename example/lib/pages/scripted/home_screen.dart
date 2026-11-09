@@ -25,6 +25,7 @@ class HomeScreen extends StatelessWidget {
             '(${plan.inlineMode?.name ?? 'off'})',
           ),
           DemoInlineAdCard(ads: ads, placementKey: DemoAdKeys.bannerHome),
+          DemoInlineAdCard(ads: ads, placementKey: DemoAdKeys.nativeHomeFeed),
           DemoInlineAdCard(
             ads: ads,
             placementKey: DemoAdKeys.nativeWelcomeBack,
@@ -32,7 +33,7 @@ class HomeScreen extends StatelessWidget {
           FilledButton(
             onPressed: ads.isBusy
                 ? null
-                : () => ads.showScenario(
+                : () => ads.showFullscreenAds(
                     context,
                     DemoAdKeys.interStart,
                     onComplete: () => Navigator.of(context).push(
@@ -46,14 +47,14 @@ class HomeScreen extends StatelessWidget {
           OutlinedButton(
             onPressed: ads.isBusy
                 ? null
-                : () => ads.showScenario(context, DemoAdKeys.interHome),
-            child: const Text('Test INTER_HOME (step_count / refresh_rate)'),
+                : () => ads.showFullscreenAds(context, DemoAdKeys.interHome),
+            child: const Text('Test INTER_HOME (step / refresh_ms)'),
           ),
           OutlinedButton(
             onPressed: ads.isBusy
                 ? null
-                : () => ads.showScenario(context, DemoAdKeys.interWelcomeBack),
-            child: const Text('Test INTER_WELCOME_BACK'),
+                : () => ads.showFullscreenAds(context, DemoAdKeys.onResume),
+            child: const Text('Test ON_RESUME'),
           ),
           Text(
             'on_resume = ${scenarios.resolve(DemoAdKeys.onResume).resumeMode ?? 0} '

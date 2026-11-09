@@ -1,12 +1,14 @@
 package com.quanganh.core_ads
 
 import android.content.Context
+import android.graphics.Outline
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -29,7 +31,6 @@ internal object NativeAdDesign {
     const val cta = 0xFF017FE6.toInt()
     const val languageStartUnselectedCta = 0xFF7E2D96.toInt()
     const val badge = 0xFFF8C600.toInt()
-    const val mediaPlaceholder = 0xFF0E0A15.toInt()
 
     const val cardRadius = 12
     const val cardPadding = 12
@@ -39,6 +40,7 @@ internal object NativeAdDesign {
     const val iconSmall = 40
     const val iconLarge = 96
     const val buttonHeight = 48
+    const val tiny2Height = 74
     const val buttonRadius = 24
     const val mediaRadius = 8
     const val cardMediaHeight = 158
@@ -51,8 +53,7 @@ internal object NativeAdDesign {
     const val titleLineHeight = 20
     const val bodyLineHeight = 16
     const val ctaLineHeight = 20
-    const val ctaPaddingVertical = 4
-    const val ctaPaddingHorizontal = 12
+    const val ctaPaddingHorizontal = 16
 
     fun dp(context: Context, value: Int): Int =
         (value * context.resources.displayMetrics.density).roundToInt()
@@ -63,6 +64,12 @@ internal object NativeAdDesign {
             cornerRadius = dp(context, radius).toFloat()
             if (stroke != null) setStroke(dp(context, borderWidth), stroke)
         }
+
+    private fun roundedOutline(context: Context, radius: Int) = object : ViewOutlineProvider() {
+        override fun getOutline(view: View, outline: Outline) {
+            outline.setRoundRect(0, 0, view.width, view.height, dp(context, radius).toFloat())
+        }
+    }
 
     fun card(
         context: Context,
@@ -112,14 +119,14 @@ internal object NativeAdDesign {
 
     fun icon(context: Context, size: Int) = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        background = background(context, mediaPlaceholder, if (size == iconLarge) 16 else mediaRadius)
+        outlineProvider = roundedOutline(context, if (size == iconLarge) 16 else mediaRadius)
         clipToOutline = true
         contentDescription = null
     }
 
     fun media(context: Context) =
         MediaView(context).apply {
-            background = background(context, mediaPlaceholder, mediaRadius)
+            outlineProvider = roundedOutline(context, mediaRadius)
             clipToOutline = true
             setImageScaleType(ImageView.ScaleType.FIT_CENTER)
         }
@@ -131,8 +138,8 @@ internal object NativeAdDesign {
         gravity = Gravity.CENTER
         TextViewCompat.setLineHeight(this, dp(context, ctaLineHeight))
         setPadding(
-            dp(context, ctaPaddingHorizontal), dp(context, ctaPaddingVertical),
-            dp(context, ctaPaddingHorizontal), dp(context, ctaPaddingVertical),
+            dp(context, ctaPaddingHorizontal), 0,
+            dp(context, ctaPaddingHorizontal), 0,
         )
         background = background(context, cta, buttonRadius)
         visibility = if (label.isNullOrBlank()) View.GONE else View.VISIBLE

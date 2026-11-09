@@ -1,4 +1,5 @@
 import 'package:core_ads/core_ads.dart';
+import 'package:core_ads/src/services/memory_ads_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -92,6 +93,26 @@ void main() {
 
     expect(repository.fullscreenCooldown, same(cooldown));
   });
+
+  test('onShown reaches the callback of this interstitial show', () async {
+    expect(
+      (await CoreAds.initialize(
+        _config(),
+        service: MemoryAdsService(),
+      )).isSuccess,
+      isTrue,
+    );
+    expect((await CoreAds.load(_placement)).isSuccess, isTrue);
+
+    var shownCount = 0;
+    final result = await CoreAds.showInterstitial(
+      _placement,
+      onShown: () => shownCount++,
+    );
+
+    expect(result.isSuccess, isTrue);
+    expect(shownCount, 1);
+  });
 }
 
 const _placement = AdPlacement(
@@ -158,7 +179,10 @@ class _FakeAdsRepository implements AdsRepository {
   Widget nativeAd(AdPlacement placement) => const SizedBox.shrink();
 
   @override
-  Future<AdResult<void>> showInterstitial(AdPlacement placement) async {
+  Future<AdResult<void>> showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     return const AdResult.failure(AdFailure.notReady());
   }
 
@@ -179,7 +203,10 @@ class _FakeAdsRepository implements AdsRepository {
   }
 
   @override
-  Future<AdResult<void>> showAppOpen(AdPlacement placement) async {
+  Future<AdResult<void>> showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) async {
     return const AdResult.failure(AdFailure.notReady());
   }
 

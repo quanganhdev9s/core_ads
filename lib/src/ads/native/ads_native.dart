@@ -21,7 +21,7 @@ import 'native_ad_shimmer.dart';
 /// - Hết [refreshRate], widget xóa ad hiện tại qua [CoreAds.clear]. Thông báo
 ///   reload từ CoreAds khiến widget tải ad mới và bắt đầu chu kỳ tiếp theo
 ///   sau khi ad mới xuất hiện. Lỗi tải hiển thị [error] hoặc [errorBuilder].
-/// - `collap_config` không thuộc widget này. [AdsCollapsibleNative] nhận các
+/// - `open_ad_on_clicks` không thuộc widget này. [AdsCollapsibleNative] nhận các
 ///   lần bấm cần bỏ qua qua `collapseClickCounts` và quản lý nút thu gọn.
 class AdsNative extends StatefulWidget {
   /// Temporary visual aid for the example app. Disabled by default.
@@ -152,6 +152,11 @@ class _AdsNativeState extends State<AdsNative> with WidgetsBindingObserver {
       }
       _loadFuture = _load();
     } else if (oldWidget.refreshRate != widget.refreshRate) {
+      if (oldWidget.refreshRate == null && widget.refreshRate != null &&
+          _lastVisibleAt != null) {
+        // Resume the refresh interval from when this ad becomes active again.
+        _lastVisibleAt = DateTime.now();
+      }
       _startRefreshTimer();
     }
   }

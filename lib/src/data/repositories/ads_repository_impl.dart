@@ -190,12 +190,15 @@ class AdsRepositoryImpl implements AdsRepository {
   }
 
   @override
-  Future<AdResult<void>> showInterstitial(AdPlacement placement) {
+  Future<AdResult<void>> showInterstitial(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) {
     if (placement.type != AdType.interstitial) {
       return Future.value(_invalidPlacement(placement, AdType.interstitial));
     }
 
-    return _interstitialManager(placement).show();
+    return _interstitialManager(placement).show(onShown: onShown);
   }
 
   @override
@@ -227,12 +230,15 @@ class AdsRepositoryImpl implements AdsRepository {
   }
 
   @override
-  Future<AdResult<void>> showAppOpen(AdPlacement placement) {
+  Future<AdResult<void>> showAppOpen(
+    AdPlacement placement, {
+    void Function()? onShown,
+  }) {
     if (placement.type != AdType.appOpen) {
       return Future.value(_invalidPlacement(placement, AdType.appOpen));
     }
 
-    return _appOpenManager(placement).show();
+    return _appOpenManager(placement).show(onShown: onShown);
   }
 
   @override
