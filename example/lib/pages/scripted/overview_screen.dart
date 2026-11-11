@@ -49,7 +49,6 @@ class OverviewScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '${scenarios.script.placements.length} placements · '
-            'ads_profile=${scenarios.script.settings.adsProfile} · '
             'scenario=${scenarios.script.scenario.name} · '
             'on_resume=${scenarios.resolve(DemoAdKeys.onResume).resumeMode ?? 0} · '
             'rewards earned=${ads.rewardCount}',

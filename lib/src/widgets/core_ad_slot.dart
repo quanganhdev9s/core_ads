@@ -19,6 +19,7 @@ class CoreAdSlot extends StatefulWidget {
     required this.controller,
     required this.placementKey,
     super.key,
+    this.onboardingPageIndex,
     this.nativeHeight,
     this.collapsedNativeHeight,
     this.bannerConfig = const BannerAdConfig.banner(),
@@ -29,6 +30,10 @@ class CoreAdSlot extends StatefulWidget {
 
   final AdScenarioController controller;
   final String placementKey;
+
+  /// Zero-based PageView index for a multi-page onboarding native placement.
+  /// The script's `pages` values are one-based.
+  final int? onboardingPageIndex;
 
   /// Overrides the height suggested by the selected native factory.
   final double? nativeHeight;
@@ -75,6 +80,16 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
     if (!widget.controller.isInitialized) return const SizedBox.shrink();
     final plan = widget.controller.resolve(widget.placementKey);
     if (!plan.isEnabled) return const SizedBox.shrink();
+    if (widget.onboardingPageIndex case final index?) {
+      final selected = plan.nativeForIntro(index + 1);
+      if (selected == null || !_isInlineNative(selected)) {
+        return const SizedBox.shrink();
+      }
+      return KeyedSubtree(
+        key: ValueKey(widget.controller.revision),
+        child: _singleFormatAd(selected, MediaQuery.sizeOf(context)),
+      );
+    }
     if (!_canRenderInline(plan)) {
       return _hideInvalidPlan(plan);
     }
@@ -109,13 +124,12 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
         nativeClearOnDispose: false,
         bannerClearOnDispose: false,
       ),
-      null => _singleFormatAd(plan, screenSize),
+      null => _singleFormatAd(plan.steps.single, screenSize),
     };
     return KeyedSubtree(key: ValueKey(widget.controller.revision), child: ad);
   }
 
-  Widget _singleFormatAd(AdScenarioPlan plan, Size screenSize) {
-    final step = plan.steps.single;
+  Widget _singleFormatAd(AdScenarioStep step, Size screenSize) {
     return switch (step.placement.type) {
       AdType.banner => AdsBanner(
         placement: step.placement,

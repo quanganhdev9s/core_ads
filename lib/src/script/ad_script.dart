@@ -7,19 +7,7 @@ import 'ad_config_enums.dart';
 import 'ad_scenario_keys.dart';
 import 'ad_script_diagnostics.dart';
 
-/// Thông tin do app cung cấp để chọn bộ quảng cáo từ ads_profile.
-final class AdScriptAudience {
-  const AdScriptAudience({
-    this.isMarketingUser = false,
-    this.isTestAdDevice = false,
-    this.isPremium = false,
-  });
-
-  final bool isMarketingUser;
-  final bool isTestAdDevice;
-  final bool isPremium;
-}
-
+/// Bộ quảng cáo do app chọn trước khi đưa script vào package.
 enum AdScriptScenario { off, full, basic }
 
 /// Bản chụp cấu hình quảng cáo sau khi đọc JSON từ Remote Config.
@@ -45,7 +33,7 @@ final class AdScript {
   /// để bên gọi giữ cấu hình hợp lệ trước đó.
   factory AdScript.parse(
     String source, {
-    AdScriptAudience audience = const AdScriptAudience(),
+    AdScriptScenario scenario = AdScriptScenario.full,
     String? pagesJson,
     bool useTestIds = false,
   }) {
@@ -65,8 +53,6 @@ final class AdScript {
         'Config v2 requires ad_placements; v1 is no longer supported',
       );
     }
-    final v2Settings = _object(body['ad_settings'] ?? {}, 'ad_settings');
-    final scenario = _chooseScenario(v2Settings, audience);
     final parsedBody = _normalize(
       body,
       scenario,
@@ -103,28 +89,6 @@ final class AdScript {
   }
 
   AdScriptPlacement? operator [](String key) => placements[key];
-
-  static AdScriptScenario _chooseScenario(
-    Map<String, Object?> settings,
-    AdScriptAudience audience,
-  ) {
-    if (audience.isPremium) return AdScriptScenario.off;
-    final profile =
-        _integer(settings['ads_profile'], 'ad_settings.ads_profile') ?? 1;
-    return switch (profile) {
-      0 => AdScriptScenario.off,
-      1 => AdScriptScenario.full,
-      2 =>
-        audience.isMarketingUser
-            ? AdScriptScenario.full
-            : AdScriptScenario.basic,
-      3 =>
-        audience.isTestAdDevice
-            ? AdScriptScenario.basic
-            : AdScriptScenario.full,
-      _ => throw FormatException('ad_settings.ads_profile must be 0..3'),
-    };
-  }
 
   /// Style ghi đè của các factory có sẵn, kể cả khi placement không khai báo
   /// `template` và coordinator chọn factory mặc định lúc chạy.
@@ -475,22 +439,21 @@ final class AdScript {
 /// Nếu danh sách ad unit ID đã đổi, app cần khởi tạo lại CoreAds tại thời điểm
 /// an toàn vì quảng cáo đang hiển thị có thể bị giải phóng.
 final class AdScriptStore {
-  AdScriptStore(
-    this.current, {
-    this.audience = const AdScriptAudience(),
-    this.useTestIds = false,
-  });
+  AdScriptStore(this.current, {this.useTestIds = false});
 
   AdScript current;
-  final AdScriptAudience audience;
   final bool useTestIds;
   FormatException? lastError;
 
-  bool tryUpdate(String source, {String? pagesJson}) {
+  bool tryUpdate(
+    String source, {
+    AdScriptScenario? scenario,
+    String? pagesJson,
+  }) {
     try {
       final next = AdScript.parse(
         source,
-        audience: audience,
+        scenario: scenario ?? current.scenario,
         pagesJson: pagesJson,
         useTestIds: useTestIds,
       );
@@ -510,9 +473,6 @@ final class AdScriptSettings {
   AdScriptSettings._(this.values);
 
   final Map<String, Object?> values;
-
-  int? get adsProfile =>
-      _optionalInt(values['ads_profile'], 'settings.ads_profile');
 
   /// Placement bù khi Splash không hiện được ad, ví dụ `inter_language`.
   String? get splashFallback => values['splash_fallback']?.toString();
@@ -600,7 +560,6 @@ AdScriptSettings _safeSettings(Object? raw) {
     }
   }
   for (final key in [
-    'ads_profile',
     'full_inter_gap_ms',
     'basic_inter_gap_ms',
     'full_open_gap_ms',
@@ -612,8 +571,6 @@ AdScriptSettings _safeSettings(Object? raw) {
     try {
       final candidate = AdScriptSettings._(values);
       switch (key) {
-        case 'ads_profile':
-          candidate.adsProfile;
         case 'full_inter_gap_ms' || 'basic_inter_gap_ms':
           candidate.gapFor(
             key == 'full_inter_gap_ms'

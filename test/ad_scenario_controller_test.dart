@@ -26,9 +26,10 @@ void main() {
 
   AdScenarioController controller(
     String source, {
+    AdScriptScenario scenario = AdScriptScenario.full,
     bool Function()? shouldFail,
   }) => AdScenarioController(
-    initialScript: AdScript.parse(source),
+    initialScript: AdScript.parse(source, scenario: scenario),
     resolveAdUnitIds: (name, type) => [name],
     buildAdsConfig: (ids) =>
         AdsConfig(environment: AdsEnvironment.test, adUnitIds: ids),
@@ -94,6 +95,61 @@ void main() {
     expect(ads.resolve('banner_home').isEnabled, isFalse);
     expect(find.byType(AdsBanner), findsNothing);
     expect(find.byType(AdsNative), findsNothing);
+    ads.dispose();
+  });
+
+  testWidgets('slot selects the native for a zero-based onboarding page', (
+    tester,
+  ) async {
+    const source = '''
+{"ad_settings": {"ads_profile": 1}, "ad_placements": {"full": {
+  "native_onboarding": {"enable": true, "template": "Big4", "pages": [2, 4]}
+}}}
+''';
+    final ads = controller(source);
+    expect((await ads.initialize()).isSuccess, isTrue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CoreAdSlot(
+            controller: ads,
+            placementKey: 'native_onboarding',
+            onboardingPageIndex: 1,
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.widget<AdsNative>(find.byType(AdsNative)).placement.key,
+      'native_onboarding.native_onboarding2',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CoreAdSlot(
+            controller: ads,
+            placementKey: 'native_onboarding',
+            onboardingPageIndex: 2,
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(AdsNative), findsNothing);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CoreAdSlot(
+            controller: ads,
+            placementKey: 'native_onboarding',
+            onboardingPageIndex: 3,
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.widget<AdsNative>(find.byType(AdsNative)).placement.key,
+      'native_onboarding.native_onboarding4',
+    );
     ads.dispose();
   });
 
@@ -394,7 +450,7 @@ void main() {
 ''';
     final configs = <AdsConfig>[];
     final ads = AdScenarioController(
-      initialScript: AdScript.parse(source),
+      initialScript: AdScript.parse(source, scenario: AdScriptScenario.basic),
       resolveAdUnitIds: (name, type) => [name],
       buildAdsConfig: (ids) =>
           AdsConfig(environment: AdsEnvironment.test, adUnitIds: ids),
@@ -418,6 +474,29 @@ void main() {
       configs.single.fullscreenCooldown.interstitialAppOpenInterval,
       const Duration(milliseconds: 30000),
     );
+    ads.dispose();
+  });
+
+  test('app can switch full to basic when applying remote JSON', () async {
+    const source = '''
+{"ad_settings":{},"ad_placements":{
+  "full":{"banner_home":{"format":"native"}},
+  "basic":{"banner_home":{"format":"banner"}}
+}}
+''';
+    final ads = controller(source);
+    expect(ads.script.scenario, AdScriptScenario.full);
+    expect(ads.resolve('banner_home').inlineMode, AdInlineMode.native);
+
+    expect(
+      (await ads.applyRemoteJson(
+        source,
+        scenario: AdScriptScenario.basic,
+      )).isSuccess,
+      isTrue,
+    );
+    expect(ads.script.scenario, AdScriptScenario.basic);
+    expect(ads.resolve('banner_home').inlineMode, AdInlineMode.banner);
     ads.dispose();
   });
 
@@ -718,7 +797,7 @@ void main() {
   "inter_home": {"format": "inter_then_native_full", "enable": true}
 }}}
 ''';
-      final off = controller(offSource);
+      final off = controller(offSource, scenario: AdScriptScenario.off);
       expect(await off.preloadScenario('inter_home'), isEmpty);
       expect(await off.preloadNative('inter_home'), isEmpty);
       off.dispose();
@@ -739,7 +818,10 @@ void main() {
   "basic": {"native_splash": {"enable": false, "template": "Big1"}}
 }}
 ''';
-      final basicOff = controller(basicOffSource);
+      final basicOff = controller(
+        basicOffSource,
+        scenario: AdScriptScenario.basic,
+      );
       expect(await basicOff.preloadNative('native_splash'), isEmpty);
       basicOff.dispose();
     },

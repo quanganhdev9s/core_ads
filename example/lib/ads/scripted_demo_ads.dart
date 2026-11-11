@@ -7,17 +7,15 @@ import 'native_ui_preview_catalog.dart';
 /// Config v2 là nguồn cấu hình duy nhất của example.
 /// Khi tích hợp thật, thay [demoAdConfigJson] bằng JSON từ Remote Config.
 abstract final class ScriptedDemoAds {
-  static AdScenarioController loadConfig([
-    AdScriptAudience audience = const AdScriptAudience(),
-  ]) => fromJson(demoAdConfigJson, audience: audience);
+  static AdScenarioController loadConfig(AdScriptScenario scenario) =>
+      fromJson(demoAdConfigJson, scenario: scenario);
 
   static AdScenarioController fromJson(
     String json, {
-    AdScriptAudience audience = const AdScriptAudience(),
+    required AdScriptScenario scenario,
   }) {
     return AdScenarioController(
-      initialScript: AdScript.parse(json, audience: audience, useTestIds: true),
-      audience: audience,
+      initialScript: AdScript.parse(json, scenario: scenario, useTestIds: true),
       useTestIds: true,
       resolveAdUnitIds: (name, type) => [
         switch (type) {

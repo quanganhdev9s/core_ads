@@ -38,7 +38,6 @@ final class AdScenarioController extends ChangeNotifier {
     String? expandedCollapseFactoryId,
     String? collapsedNativeFactoryId,
     ScenarioAdsInitializer? initializeAds,
-    this.audience = const AdScriptAudience(),
     this.useTestIds = false,
   }) : bannerNativeFactoryId =
            bannerNativeFactoryId ??
@@ -60,7 +59,6 @@ final class AdScenarioController extends ChangeNotifier {
   final String expandedCollapseFactoryId;
   final String collapsedNativeFactoryId;
   final ScenarioAdsInitializer _initializeAds;
-  final AdScriptAudience audience;
   final bool useTestIds;
   final AdInterstitialCallCounter _callCounter = AdInterstitialCallCounter();
   int _onboardingTransitionCount = 0;
@@ -258,6 +256,7 @@ final class AdScenarioController extends ChangeNotifier {
   /// Placement sai riêng lẻ được log và tắt trong script mới.
   Future<AdResult<void>> applyRemoteJson(
     String source, {
+    AdScriptScenario? scenario,
     String? pagesJson,
   }) async {
     if (_busy) return _busyResult();
@@ -265,7 +264,7 @@ final class AdScenarioController extends ChangeNotifier {
     try {
       final nextScript = AdScript.parse(
         source,
-        audience: audience,
+        scenario: scenario ?? _script.scenario,
         pagesJson: pagesJson,
         useTestIds: useTestIds,
       );

@@ -4,6 +4,7 @@ import 'package:core_ads/core_ads.dart';
 import 'package:flutter/material.dart';
 
 import 'demo_ad_config.dart';
+import 'app_ad_profile.dart';
 import 'demo_ad_loading.dart';
 import 'scripted_demo_ads.dart';
 import 'demo_ad_keys.dart';
@@ -59,7 +60,8 @@ class DemoAdsController extends ChangeNotifier {
     AdScenarioController? loaded;
     try {
       loaded = ScriptedDemoAds.loadConfig(
-        AdScriptAudience(
+        selectAppAdScenario(
+          demoAdConfigJson,
           isMarketingUser: isMarketingUser,
           isTestAdDevice: isTestAdDevice,
           isPremium: isPremium,
@@ -106,7 +108,15 @@ class DemoAdsController extends ChangeNotifier {
     isBusy = true;
     _notify();
     try {
-      final result = await ads.applyRemoteJson(demoAdConfigJson);
+      final result = await ads.applyRemoteJson(
+        demoAdConfigJson,
+        scenario: selectAppAdScenario(
+          demoAdConfigJson,
+          isMarketingUser: isMarketingUser,
+          isTestAdDevice: isTestAdDevice,
+          isPremium: isPremium,
+        ),
+      );
       if (result.isFailure) {
         log('Apply config v2: ${_resultText(result)}');
         return;

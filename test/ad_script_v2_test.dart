@@ -44,12 +44,9 @@ void main() {
   });
 
   test('reward types resolve to their own ad formats in full and basic', () {
-    for (final audience in [
-      const AdScriptAudience(),
-      const AdScriptAudience(isMarketingUser: true),
-    ]) {
+    for (final scenario in [AdScriptScenario.full, AdScriptScenario.basic]) {
       final scenarios = coordinator(
-        AdScript.parse(json, audience: audience, useTestIds: true),
+        AdScript.parse(json, scenario: scenario, useTestIds: true),
       );
       final reward = scenarios.resolve('reward_test').steps.single;
       expect(reward.branch, 'reward');
@@ -95,7 +92,7 @@ void main() {
     }''';
     final fullScript = AdScript.parse(
       source,
-      audience: const AdScriptAudience(isMarketingUser: true),
+      scenario: AdScriptScenario.full,
       useTestIds: true,
     );
     final full = coordinator(fullScript);
@@ -110,7 +107,11 @@ void main() {
     );
     expect(full.resolve('unknown_bonus').isEnabled, isFalse);
 
-    final basicScript = AdScript.parse(source, useTestIds: true);
+    final basicScript = AdScript.parse(
+      source,
+      scenario: AdScriptScenario.basic,
+      useTestIds: true,
+    );
     final basic = coordinator(basicScript);
     expect(basic.resolve('banner_home').inlineMode, AdInlineMode.banner);
     expect(basicScript['reward_inter_bonus'], isNull);
@@ -171,94 +172,84 @@ void main() {
     },
   );
 
-  test(
-    'profile 2 sends natural users to basic and marketing users to full',
-    () {
-      final basic = coordinator(AdScript.parse(json, useTestIds: true));
-      expect(basic.script.scenario, AdScriptScenario.basic);
-      expect(basic.resolve('ads_splash').steps.single.branch, 'app_open');
-      expect(basic.resolve('banner_home').inlineMode, AdInlineMode.banner);
-      expect(basic.resolve('inter_home').interstitial, isNotNull);
-      expect(basic.resolve('inter_language').steps, isEmpty);
-      expect(basic.resolve('inter_language_fallback').interstitial, isNotNull);
-      expect(basic.resolve('native_splash').steps, isEmpty);
-      expect(basic.resolve('banner_setting').inlineMode, AdInlineMode.banner);
-      expect(
-        basic.script.settings.gapFor(basic.script.scenario).interval,
-        const Duration(seconds: 90),
-      );
+  test('app-selected basic and full scenarios resolve their placements', () {
+    final basic = coordinator(
+      AdScript.parse(json, scenario: AdScriptScenario.basic, useTestIds: true),
+    );
+    expect(basic.script.scenario, AdScriptScenario.basic);
+    expect(basic.resolve('ads_splash').steps.single.branch, 'app_open');
+    expect(basic.resolve('banner_home').inlineMode, AdInlineMode.banner);
+    expect(basic.resolve('inter_home').interstitial, isNotNull);
+    expect(basic.resolve('inter_language').steps, isEmpty);
+    expect(basic.resolve('inter_language_fallback').interstitial, isNotNull);
+    expect(basic.resolve('native_splash').steps, isEmpty);
+    expect(basic.resolve('banner_setting').inlineMode, AdInlineMode.banner);
+    expect(
+      basic.script.settings.gapFor(basic.script.scenario).interval,
+      const Duration(seconds: 90),
+    );
 
-      final full = coordinator(
-        AdScript.parse(
-          json,
-          audience: const AdScriptAudience(isMarketingUser: true),
-          useTestIds: true,
-        ),
-      );
-      expect(full.script.scenario, AdScriptScenario.full);
-      expect(full.resolve('ads_splash').steps.map((step) => step.branch), [
-        'inter',
-        'native_inter',
-      ]);
-      expect(
-        full.resolve('native_splash').native!.placement.nativeFactoryId,
-        'Big5',
-      );
-      expect(
-        full.resolve('native_splash').native!.placement.nativeStyle!.values,
-        containsPair(NativeAdStyleKeys.ctaBackground, '#7B2FA6'),
-      );
-      expect(full.resolve('native_language').native!.branch, 'native');
-      expect(
-        full.resolve('native_language').native!.placement.nativeFactoryId,
-        'LanguageStart1',
-      );
-      expect(
-        full.resolve('native_setting').native!.placement.nativeFactoryId,
-        'Big2',
-      );
-      expect(
-        full
-            .resolve('native_setting')
-            .native!
-            .placement
-            .nativeStyle!
-            .values[NativeAdStyleKeys.ctaBackground],
-        '#FFC107',
-      );
-      expect(full.resolve('native_get_start').native!.branch, 'native');
-      expect(
-        full.resolve('native_get_start').native!.placement.nativeFactoryId,
-        'LanguageStart1',
-      );
-      expect(full.resolve('native_onboarding').nativeForIntro(2), isNotNull);
-      expect(full.resolve('native_onboarding').nativeForIntro(3), isNull);
-      expect(full.script['native_full_onboarding']!.pages, {2});
-      expect(
-        full.resolve('on_resume').native!.placement.nativeFactoryId,
-        'Big5',
-      );
-      expect(
-        full.resolve('banner_home').inlineMode,
-        AdInlineMode.collapsibleNative,
-      );
-      expect(full.resolve('banner_home').native!.collapseClickCounts, {2, 4});
-      expect(
-        full.script.settings.gapFor(full.script.scenario).interval,
-        const Duration(seconds: 10),
-      );
-    },
-  );
+    final full = coordinator(
+      AdScript.parse(json, scenario: AdScriptScenario.full, useTestIds: true),
+    );
+    expect(full.script.scenario, AdScriptScenario.full);
+    expect(full.resolve('ads_splash').steps.map((step) => step.branch), [
+      'inter',
+      'native_inter',
+    ]);
+    expect(
+      full.resolve('native_splash').native!.placement.nativeFactoryId,
+      'Big5',
+    );
+    expect(
+      full.resolve('native_splash').native!.placement.nativeStyle!.values,
+      containsPair(NativeAdStyleKeys.ctaBackground, '#7B2FA6'),
+    );
+    expect(full.resolve('native_language').native!.branch, 'native');
+    expect(
+      full.resolve('native_language').native!.placement.nativeFactoryId,
+      'LanguageStart1',
+    );
+    expect(
+      full.resolve('native_setting').native!.placement.nativeFactoryId,
+      'Big2',
+    );
+    expect(
+      full
+          .resolve('native_setting')
+          .native!
+          .placement
+          .nativeStyle!
+          .values[NativeAdStyleKeys.ctaBackground],
+      '#FFC107',
+    );
+    expect(full.resolve('native_get_start').native!.branch, 'native');
+    expect(
+      full.resolve('native_get_start').native!.placement.nativeFactoryId,
+      'LanguageStart1',
+    );
+    expect(full.resolve('native_onboarding').nativeForIntro(2), isNotNull);
+    expect(full.resolve('native_onboarding').nativeForIntro(3), isNull);
+    expect(full.script['native_full_onboarding']!.pages, {2});
+    expect(full.resolve('on_resume').native!.placement.nativeFactoryId, 'Big5');
+    expect(
+      full.resolve('banner_home').inlineMode,
+      AdInlineMode.collapsibleNative,
+    );
+    expect(full.resolve('banner_home').native!.collapseClickCounts, {2, 4});
+    expect(
+      full.script.settings.gapFor(full.script.scenario).interval,
+      const Duration(seconds: 10),
+    );
+  });
 
   test('sample JSON exposes every key group and format', () {
     final full = coordinator(
-      AdScript.parse(
-        json,
-        audience: const AdScriptAudience(isMarketingUser: true),
-        useTestIds: true,
-      ),
+      AdScript.parse(json, scenario: AdScriptScenario.full, useTestIds: true),
     );
-    final basic = coordinator(AdScript.parse(json, useTestIds: true));
+    final basic = coordinator(
+      AdScript.parse(json, scenario: AdScriptScenario.basic, useTestIds: true),
+    );
     final covered = <String>{};
     for (final scenarios in [full, basic]) {
       for (final key in scenarios.script.placements.keys) {
@@ -305,26 +296,29 @@ void main() {
     );
   });
 
-  test('premium disables all ads and external pages override embedded pages', () {
-    final off = coordinator(
-      AdScript.parse(json, audience: const AdScriptAudience(isPremium: true)),
-    );
-    expect(off.script.scenario, AdScriptScenario.off);
-    expect(off.resolve('ads_splash').steps, isEmpty);
-    final full = coordinator(
-      AdScript.parse(
-        json,
-        audience: const AdScriptAudience(isMarketingUser: true),
-        pagesJson:
-            '{"native_language":2,"native_onboarding":[1,3],"native_full_onboarding":[3]}',
-        useTestIds: true,
-      ),
-    );
-    expect(full.resolve('native_language').native!.branch, 'native');
-    expect(full.resolve('native_onboarding').nativeForIntro(3), isNotNull);
-    expect(full.resolve('native_onboarding').nativeForIntro(2), isNull);
-    expect(full.script['native_full_onboarding']!.pages, {3});
-  });
+  test(
+    'app-selected off disables ads; external pages override embedded pages',
+    () {
+      final off = coordinator(
+        AdScript.parse(json, scenario: AdScriptScenario.off),
+      );
+      expect(off.script.scenario, AdScriptScenario.off);
+      expect(off.resolve('ads_splash').steps, isEmpty);
+      final full = coordinator(
+        AdScript.parse(
+          json,
+          scenario: AdScriptScenario.full,
+          pagesJson:
+              '{"native_language":2,"native_onboarding":[1,3],"native_full_onboarding":[3]}',
+          useTestIds: true,
+        ),
+      );
+      expect(full.resolve('native_language').native!.branch, 'native');
+      expect(full.resolve('native_onboarding').nativeForIntro(3), isNotNull);
+      expect(full.resolve('native_onboarding').nativeForIntro(2), isNull);
+      expect(full.script['native_full_onboarding']!.pages, {3});
+    },
+  );
 
   test('Collap template keeps one native placement for both layouts', () {
     const source = '''{
@@ -499,8 +493,10 @@ void main() {
     },
   );
 
-  test('profile 3 uses basic on test devices; boolean enable only toggles', () {
-    const source = '''{
+  test(
+    'app-selected basic uses its placements; boolean enable only toggles',
+    () {
+      const source = '''{
       "ad_settings":{"ads_profile":3},
       "ad_placements":{
         "full":{"ads_splash":{"enable":false}},
@@ -508,19 +504,17 @@ void main() {
       },
       "ad_ids":{"aoa_splash":["first","second"]}
     }''';
-    final regular = coordinator(AdScript.parse(source));
-    expect(regular.script.scenario, AdScriptScenario.full);
-    expect(regular.resolve('ads_splash').steps, isEmpty);
-    final testDevice = coordinator(
-      AdScript.parse(
-        source,
-        audience: const AdScriptAudience(isTestAdDevice: true),
-      ),
-    );
-    expect(testDevice.script.scenario, AdScriptScenario.basic);
-    expect(testDevice.resolve('ads_splash').steps.single.ids, [
-      'first',
-      'second',
-    ]);
-  });
+      final regular = coordinator(AdScript.parse(source));
+      expect(regular.script.scenario, AdScriptScenario.full);
+      expect(regular.resolve('ads_splash').steps, isEmpty);
+      final testDevice = coordinator(
+        AdScript.parse(source, scenario: AdScriptScenario.basic),
+      );
+      expect(testDevice.script.scenario, AdScriptScenario.basic);
+      expect(testDevice.resolve('ads_splash').steps.single.ids, [
+        'first',
+        'second',
+      ]);
+    },
+  );
 }

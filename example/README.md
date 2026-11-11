@@ -46,16 +46,20 @@ cover the remaining formats and page-based native placements. Only
 interstitial gap.
 
 For production, let the app determine acquisition source, test device status,
-and premium status, then parse the Remote Config JSON with that audience:
+and premium status, then select the scenario before passing the JSON to the package:
 
 ```dart
-final audience = AdScriptAudience(
+final scenario = selectAppAdScenario(
+  adConfigJson,
   isMarketingUser: isMarketingUser,
   isTestAdDevice: isGooglePlayTester || isAdMobTestDevice,
   isPremium: isPremium,
 );
-final script = AdScript.parse(adConfigJson, audience: audience,
-    pagesJson: pagesRemoteJson);
+final script = AdScript.parse(
+  adConfigJson,
+  scenario: scenario,
+  pagesJson: pagesRemoteJson,
+);
 ```
 
 `pagesJson` is a separate Remote Config value. For example:

@@ -148,14 +148,20 @@ Firebase project or fetch interval.
 
 ```dart
 final ads = AdScenarioController(
-  initialScript: AdScript.parse(bundledFallbackJson),
+  initialScript: AdScript.parse(
+    bundledFallbackJson,
+    scenario: appSelectedScenario, // full, basic, or off
+  ),
   resolveAdUnitIds: (name, type) => appAdUnitIds[name] ?? const [],
   buildAdsConfig: (ids) => AdsConfig(
     environment: AdsEnvironment.production,
     adUnitIds: ids,
   ),
 );
-await ads.applyRemoteJson(remoteConfigJson); // Keeps fallback on parse failure.
+await ads.applyRemoteJson(
+  remoteConfigJson,
+  scenario: appSelectedScenario,
+); // Keeps fallback on parse failure.
 await ads.initialize();
 
 // At a screen's inline ad location:
@@ -187,9 +193,11 @@ Call `preloadScenario(key)` to load every enabled step of a key, or
 placement to load result and leave the interstitial `step` counter unchanged.
 
 Config v2 is the supported Remote Config schema. The JSON must contain
-`ad_placements`, grouped under `full` and `basic`. `ad_settings.ads_profile`
-selects the active scenario from the app-provided audience. Placement key
-prefixes identify the ad group; `format` chooses its display mode. A placement
+`ad_placements`, grouped under `full` and `basic`. The app interprets
+`ad_settings.ads_profile` and passes `AdScriptScenario.full`, `.basic`, or `.off`
+to the parser. The package does not inspect user attribution, test-device, or
+premium state. Placement key prefixes identify the ad group; `format` chooses
+its display mode. A placement
 present in the selected group is enabled unless `enable` is `false`. Native page
 selection lives in the separate `pages` value (or the JSON's top-level
 `pages` object). `open_ad_on_clicks` is a list of collapse-button tap counts.

@@ -1,6 +1,7 @@
 import 'package:core_ads/core_ads.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// ignore: avoid_relative_lib_imports
 import '../example/lib/ads/splash_timing_config.dart';
 
 void main() {

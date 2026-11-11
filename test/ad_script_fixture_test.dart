@@ -7,13 +7,10 @@ import '../example/lib/ads/demo_ad_config.dart';
 
 void main() {
   test('the official example config resolves both v2 scenarios', () {
-    for (final audience in [
-      const AdScriptAudience(),
-      const AdScriptAudience(isMarketingUser: true),
-    ]) {
+    for (final scenario in [AdScriptScenario.full, AdScriptScenario.basic]) {
       final script = AdScript.parse(
         demoAdConfigJson,
-        audience: audience,
+        scenario: scenario,
         useTestIds: true,
       );
       final scenarios = AdScenarioCoordinator(
