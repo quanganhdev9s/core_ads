@@ -53,9 +53,20 @@ class GoogleConsentManager extends ConsentManager {
 
       final umpResult = await _requestConsentInfoUpdate(config.consent);
       if (umpResult.isFailure) {
-        updateCanRequestAds(false);
-        _logConsentResult(umpResult, canRequestAds: false);
-        return umpResult;
+        // The update needs the network, and a moment without it (a DNS
+        // lookup timing out at launch) used to cost the whole session its
+        // ads. As Google's flow has it, consent from an earlier session still
+        // holds: canRequestAds() answers from what the SDK has stored.
+        final canRequest = await ConsentInformation.instance.canRequestAds();
+        updateCanRequestAds(canRequest);
+        if (!canRequest) {
+          _logConsentResult(umpResult, canRequestAds: false);
+          return umpResult;
+        }
+        _logger.log('UMP request failed, but stored consent allows ads');
+        final trackingResult = await _requestTrackingIfNeeded(config.consent);
+        _logConsentResult(trackingResult, canRequestAds: canRequest);
+        return trackingResult;
       }
 
       await _logConsentState();
