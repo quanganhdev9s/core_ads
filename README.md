@@ -222,6 +222,13 @@ before `reward_*`. Splash supports `aoa`, `inter`, and
 `inter_then_native_full`; banner supports `banner`, `banner_collapsible`,
 `native`, and `native_collapsible`; `on_resume` supports `aoa` and
 `welcome_back`. Native and reward placements do not use `format`.
+For `on_resume.format = "welcome_back"`, configure an enabled
+`inter_welcome_back` placement with `format = "inter_then_native_full"`.
+Calling `showFullscreenAds(context, 'on_resume')` uses the same interstitial
+and full-screen native placements, IDs, `step`, `wait_ms`, and `template` as
+`inter_welcome_back`. Its native ad unit is `native_inter_welcome_back`.
+If that placement is missing, disabled, or uses another format, `on_resume`
+is disabled. With `format = "aoa"`, it uses the `on_resume` app-open ad unit.
 Omitted formats default to `inter`, `banner`, or `aoa` for the corresponding
 key group. Invalid formats disable only that placement. `AdConfigType` is
 inferred internally from the key; `AdConfigFormat` and `AdConfigTemplate`

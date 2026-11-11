@@ -69,6 +69,37 @@ final class AdScenarioCoordinator {
       return AdScenarioPlan(key: key, enable: source.enable, steps: const []);
     }
 
+    if (key == 'on_resume' &&
+        source.configFormat == AdConfigFormat.welcomeBack) {
+      final welcomeBack = _resolve('inter_welcome_back');
+      if (welcomeBack.format != AdConfigFormat.interThenNativeFull ||
+          welcomeBack.interstitial == null ||
+          welcomeBack.native == null) {
+        if (_invalidKeysLogged.add(key)) {
+          logAdScriptError(
+            key,
+            'welcome_back requires enabled inter_welcome_back with '
+            'format inter_then_native_full',
+          );
+        }
+        return AdScenarioPlan(
+          key: key,
+          enable: 0,
+          steps: const [],
+          configType: source.configType,
+          format: source.configFormat,
+        );
+      }
+      return AdScenarioPlan(
+        key: key,
+        enable: source.enable,
+        steps: welcomeBack.steps,
+        resumeMode: source.enable,
+        configType: source.configType,
+        format: source.configFormat,
+      );
+    }
+
     // Parser đã hiểu `enable`; tầng này chỉ chuyển nhánh thành placement/ID.
     final branches = source.selectedBranches;
     final steps = <AdScenarioStep>[];
@@ -262,7 +293,8 @@ final class AdInterstitialCallCounter {
 /// Kế hoạch của một key logic sau khi giải quyết các nhánh quảng cáo.
 ///
 /// Plan có thể có nhiều bước, ví dụ inter rồi native toàn màn hình, hoặc
-/// không có bước nào khi key bị tắt/sai. `on_resume` chỉ mang [resumeMode].
+/// không có bước nào khi key bị tắt/sai. `on_resume` mang [resumeMode] và
+/// dùng các bước của `inter_welcome_back` khi format là `welcome_back`.
 final class AdScenarioPlan {
   const AdScenarioPlan({
     required this.key,

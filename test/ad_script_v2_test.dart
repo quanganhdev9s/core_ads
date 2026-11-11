@@ -231,7 +231,27 @@ void main() {
     expect(full.resolve('native_onboarding').nativeForIntro(2), isNotNull);
     expect(full.resolve('native_onboarding').nativeForIntro(3), isNull);
     expect(full.script['native_full_onboarding']!.pages, {2});
-    expect(full.resolve('on_resume').native!.placement.nativeFactoryId, 'Big5');
+    final welcomeBack = full.resolve('on_resume');
+    expect(welcomeBack.resumeMode, 2);
+    expect(welcomeBack.steps.map((step) => step.branch), [
+      'inter',
+      'native_inter',
+    ]);
+    expect(welcomeBack.interstitial!.placement.key, 'inter_welcome_back.inter');
+    expect(
+      welcomeBack.native!.placement.key,
+      'inter_welcome_back.native_inter',
+    );
+    expect(welcomeBack.native!.placement.nativeFactoryId, 'Full2');
+    expect(welcomeBack.native!.waitTime, const Duration(seconds: 3));
+    expect(
+      welcomeBack.steps.map((step) => step.placement.key),
+      full
+          .resolve('inter_welcome_back')
+          .steps
+          .map((step) => step.placement.key),
+    );
+    expect(basic.resolve('on_resume').steps.single.branch, 'app_open');
     expect(
       full.resolve('banner_home').inlineMode,
       AdInlineMode.collapsibleNative,
@@ -241,6 +261,49 @@ void main() {
       full.script.settings.gapFor(full.script.scenario).interval,
       const Duration(seconds: 10),
     );
+  });
+
+  test('welcome_back requires an enabled inter then native full scenario', () {
+    const source = '''{
+      "ad_placements":{"full":{
+        "on_resume":{"format":"welcome_back"},
+        "inter_welcome_back":{"format":"inter_then_native_full","step":2}
+      }},
+      "ad_ids":{
+        "inter_welcome_back":["inter-id"],
+        "native_inter_welcome_back":["native-id"]
+      }
+    }''';
+    final plan = coordinator(AdScript.parse(source)).resolve('on_resume');
+    expect(plan.isEnabled, isTrue);
+    expect(plan.interstitial!.ids, ['inter-id']);
+    expect(plan.interstitial!.stepCount, 2);
+    expect(plan.native!.ids, ['native-id']);
+    expect(plan.native!.placement.nativeFactoryId, 'Full1');
+
+    for (final invalid in [
+      '{"format":"inter_then_native_full","enable":false}',
+      '{"format":"inter"}',
+    ]) {
+      final invalidSource = source.replaceFirst(
+        '{"format":"inter_then_native_full","step":2}',
+        invalid,
+      );
+      final disabled = coordinator(
+        AdScript.parse(invalidSource),
+      ).resolve('on_resume');
+      expect(disabled.isEnabled, isFalse);
+      expect(disabled.steps, isEmpty);
+    }
+    final missing = coordinator(
+      AdScript.parse(
+        source.replaceFirst(
+          '"inter_welcome_back":{"format":"inter_then_native_full","step":2}',
+          '"native_other":{}',
+        ),
+      ),
+    ).resolve('on_resume');
+    expect(missing.isEnabled, isFalse);
   });
 
   test('sample JSON exposes every key group and format', () {

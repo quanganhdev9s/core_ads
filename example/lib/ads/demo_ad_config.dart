@@ -63,6 +63,11 @@ const String demoAdConfigJson = r'''
       "on_resume": {
         "format": "welcome_back"
       },
+      "inter_welcome_back": {
+        "format": "inter_then_native_full",
+        "template": "Full2",
+        "wait_ms": 3000
+      },
       "native_welcome_back": {
         "template": "Big5"
       },

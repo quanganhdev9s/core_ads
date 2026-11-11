@@ -186,32 +186,6 @@ final class AdScript {
             'open_ad_on_clicks': raw['open_ad_on_clicks'],
           if (pages.isNotEmpty) 'pages': pages,
         };
-        if (key == 'on_resume' && format == AdConfigFormat.welcomeBack) {
-          final welcome = _object(
-            selected['native_welcome_back'] ?? {},
-            'ad_placements.${scenario.name}.native_welcome_back',
-          );
-          if (_boolean(welcome['enable'], 'native_welcome_back.enable') ==
-              false) {
-            result[key] = {'enable': 0};
-            continue;
-          }
-          final welcomeTemplate = _resolveTemplate(
-            (welcome[AdConfigTemplateKeys.placementTemplate] ??
-                    AdConfigTemplate.big1.key)
-                .toString(),
-            templates,
-          );
-          placement[AdConfigTemplateKeys.resolvedTemplate] =
-              welcomeTemplate.factoryId;
-          if (welcomeTemplate.overrides.isNotEmpty) {
-            placement[NativeAdStyleKeys.normalizedStyle] =
-                welcomeTemplate.overrides;
-          }
-          if (welcome['wait_ms'] != null) {
-            placement['wait_time'] = welcome['wait_ms'];
-          }
-        }
         if (enabled && scenario != AdScriptScenario.off) {
           final branches = _branches(key, type, format, pages);
           placement['enable'] = branches.$1;
@@ -304,7 +278,8 @@ final class AdScript {
     if (type == AdConfigType.resume) {
       return switch (format) {
         AdConfigFormat.aoa => (1, {'app_open': key}),
-        AdConfigFormat.welcomeBack => (2, {'native': 'native_welcome_back'}),
+        // Coordinator dùng chính plan của inter_welcome_back cho mode này.
+        AdConfigFormat.welcomeBack => (2, <String, String>{}),
         _ => throw FormatException('$key.format is invalid: $format'),
       };
     }

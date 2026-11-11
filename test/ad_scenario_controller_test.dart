@@ -537,12 +537,13 @@ void main() {
     ads.dispose();
   });
 
-  testWidgets('showFullscreenAds presents native after a skipped inter call', (
+  testWidgets('welcome_back presents native after a skipped inter call', (
     tester,
   ) async {
     const source = '''
 {"ad_settings": {"ads_profile": 1}, "ad_placements": {"full": {
-  "inter_home": { "format": "inter_then_native_full", "enable": true, "step": 2}
+  "on_resume": {"format": "welcome_back"},
+  "inter_welcome_back": {"format": "inter_then_native_full", "enable": true, "step": 2}
 }}}
 ''';
     final repository = _ScenarioRepository();
@@ -558,6 +559,7 @@ void main() {
 
     AdScenarioShowResult? result;
     final shownPlacementKeys = <String>[];
+    var skipInterstitial = false;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -566,7 +568,8 @@ void main() {
               onPressed: () async {
                 result = await ads.showFullscreenAds(
                   context,
-                  'inter_home',
+                  'on_resume',
+                  skipInterstitial: skipInterstitial,
                   onBeforeInterstitialShow: (placement) async =>
                       shownPlacementKeys.add(placement.key),
                 );
@@ -595,10 +598,21 @@ void main() {
     await tester.tap(find.text('Show scenario'));
     await tester.pumpAndSettle();
     expect(repository.interstitialShows, 1);
-    expect(shownPlacementKeys, ['inter_home.inter']);
+    expect(shownPlacementKeys, ['inter_welcome_back.inter']);
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
     expect(result?.fullscreenResult?.isSuccess, isTrue);
+    expect(result?.nativeAdShown, isTrue);
+
+    skipInterstitial = true;
+    result = null;
+    await tester.tap(find.text('Show scenario'));
+    await tester.pumpAndSettle();
+    expect(repository.interstitialShows, 1);
+    expect(find.byType(AdsFullScreenNative), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(result?.fullscreenResult, isNull);
     expect(result?.nativeAdShown, isTrue);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -626,6 +640,7 @@ void main() {
       expect((await ads.initialize()).isSuccess, isTrue);
 
       AdScenarioShowResult? result;
+      var readyCalls = 0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -636,6 +651,9 @@ void main() {
                     context,
                     'inter_home',
                     loading: const Center(child: Text('App ad loading')),
+                    onAdReady: () async {
+                      readyCalls++;
+                    },
                   );
                 },
                 child: const Text('Show scenario'),
@@ -654,6 +672,7 @@ void main() {
       await tester.pump();
       expect(find.text('App ad loading'), findsOneWidget);
       expect(repository.interstitialShows, 1);
+      expect(readyCalls, 1);
       expect(result, isNull);
 
       repository.markShown();
@@ -665,6 +684,7 @@ void main() {
       repository.completeShow();
       await tester.pump();
       expect(result?.fullscreenResult?.isSuccess, isTrue);
+      expect(readyCalls, 1);
 
       await tester.pumpWidget(const SizedBox.shrink());
       ads.dispose();
@@ -724,6 +744,64 @@ void main() {
       'test_load_failed',
     );
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    ads.dispose();
+    await CoreAds.dispose();
+  });
+
+  testWidgets('showFullscreenAds stops waiting after its ready timeout', (
+    tester,
+  ) async {
+    const source = '''
+{"ad_settings": {"ads_profile": 1}, "ad_placements": {"full": {
+  "inter_home": {"format": "inter", "enable": true}
+}}}
+''';
+    final repository = _DeferredScenarioRepository();
+    final ads = AdScenarioController(
+      initialScript: AdScript.parse(source),
+      resolveAdUnitIds: (name, type) => [name],
+      buildAdsConfig: (ids) =>
+          AdsConfig(environment: AdsEnvironment.test, adUnitIds: ids),
+      initializeAds: (config) =>
+          CoreAds.initialize(config, repository: repository),
+    );
+    expect((await ads.initialize()).isSuccess, isTrue);
+
+    AdScenarioShowResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () async {
+                result = await ads.showFullscreenAds(
+                  context,
+                  'inter_home',
+                  loading: const Center(child: Text('App ad loading')),
+                  readyTimeout: const Duration(milliseconds: 100),
+                );
+              },
+              child: const Text('Show scenario'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Show scenario'));
+    await tester.pump();
+    expect(find.text('App ad loading'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+    expect(find.text('App ad loading'), findsNothing);
+    expect(repository.interstitialShows, 0);
+    expect(
+      (result?.fullscreenResult as AdFailed<void>).failure.code,
+      'not_ready',
+    );
+
+    repository.failLoad();
     await tester.pumpWidget(const SizedBox.shrink());
     ads.dispose();
     await CoreAds.dispose();
