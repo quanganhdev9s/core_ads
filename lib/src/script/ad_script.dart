@@ -478,8 +478,10 @@ final class AdScriptSettings {
         0,
   );
   bool get onboardingShowDots => values['onboarding_show_dots'] != false;
-  String get onboardingFullCloseButton =>
-      values['onboarding_full_close_button']?.toString() ?? 'next';
+  OnboardingFullCloseButtonStyle get onboardingFullCloseButton =>
+      OnboardingFullCloseButtonStyle.fromJson(
+        values['onboarding_full_close_button'],
+      );
 
   /// Cooldown theo bộ quảng cáo v2, tính bằng mili giây.
   AdInterstitialGapSettings gapFor(AdScriptScenario scenario) {

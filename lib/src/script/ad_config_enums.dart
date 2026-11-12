@@ -1,5 +1,19 @@
 import '../ads/native/native_ad_type.dart';
 
+/// Nút đóng native toàn màn hình trong luồng onboarding.
+enum OnboardingFullCloseButtonStyle {
+  x('x', false),
+  next('next', true);
+
+  const OnboardingFullCloseButtonStyle(this.key, this.textButton);
+
+  final String key;
+  final bool textButton;
+
+  static OnboardingFullCloseButtonStyle fromJson(Object? value) =>
+      value == x.key ? x : next;
+}
+
 /// Các key dùng để tìm và chuẩn hóa template từ ad config v2.
 abstract final class AdConfigTemplateKeys {
   static const templates = 'ad_templates';

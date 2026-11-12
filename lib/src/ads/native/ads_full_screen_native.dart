@@ -29,6 +29,7 @@ class AdsFullScreenNative extends StatefulWidget {
     this.loading,
     this.error,
     this.closeButton,
+    this.textCloseButton,
     this.onVisible,
     this.onFailed,
   });
@@ -38,6 +39,7 @@ class AdsFullScreenNative extends StatefulWidget {
   final Widget? loading;
   final Widget? error;
   final Widget? closeButton;
+  final bool? textCloseButton;
   final VoidCallback? onVisible;
   final void Function(AdFailure failure)? onFailed;
 
@@ -106,11 +108,13 @@ class _AdsFullScreenNativeState extends State<AdsFullScreenNative>
   Widget build(BuildContext context) {
     final factoryId = widget.step.placement.nativeFactoryId;
     final dark = NativeAdTemplate.forFactory(factoryId).dark;
-    final textClose = switch (defaultTargetPlatform) {
-      TargetPlatform.android => factoryId == NativeAdType.full5.factoryId,
-      TargetPlatform.iOS => factoryId == NativeAdType.full3.factoryId,
-      _ => false,
-    };
+    final textClose =
+        widget.textCloseButton ??
+        switch (defaultTargetPlatform) {
+          TargetPlatform.android => factoryId == NativeAdType.full5.factoryId,
+          TargetPlatform.iOS => factoryId == NativeAdType.full3.factoryId,
+          _ => false,
+        };
     final backgroundColor =
         _cardBackgroundColor() ??
         (dark ? const Color(0xFF1B1B1B) : const Color(0xFFFFFFFF));

@@ -223,6 +223,9 @@ final class AdScenarioController extends ChangeNotifier {
             body: AdsFullScreenNative(
               step: native,
               loading: loading,
+              textCloseButton: key == AdScenarioKeys.nativeFullOnboarding
+                  ? script.settings.onboardingFullCloseButton.textButton
+                  : null,
               onVisible: () => nativeAdShown = true,
               onClose: () => Navigator.of(routeContext).pop(),
             ),

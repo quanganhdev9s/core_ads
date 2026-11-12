@@ -1018,7 +1018,7 @@ void main() {
     await tester.tap(find.text('Next onboarding'));
     await tester.pumpAndSettle();
     expect(find.byType(AdsFullScreenNative), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(results.last.nativeAdShown, isTrue);
 
@@ -1034,7 +1034,7 @@ void main() {
     await tester.tap(find.text('Next onboarding'));
     await tester.pumpAndSettle();
     expect(find.byType(AdsFullScreenNative), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     await tester.pumpWidget(const SizedBox.shrink());

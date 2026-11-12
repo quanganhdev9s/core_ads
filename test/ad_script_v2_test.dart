@@ -13,6 +13,34 @@ void main() {
     resolveAdUnitIds: (name, type) => ['test-$name'],
   );
 
+  test('onboarding full close button uses the configured enum', () {
+    AdScript parse(Object? value) => AdScript.parse('''
+      {
+        "ad_settings": {"onboarding_full_close_button": "$value"},
+        "ad_placements": {"full": {}}
+      }
+      ''');
+
+    expect(
+      parse('x').settings.onboardingFullCloseButton,
+      OnboardingFullCloseButtonStyle.x,
+    );
+    expect(
+      parse('next').settings.onboardingFullCloseButton,
+      OnboardingFullCloseButtonStyle.next,
+    );
+    expect(
+      parse('invalid').settings.onboardingFullCloseButton,
+      OnboardingFullCloseButtonStyle.next,
+    );
+    expect(
+      AdScript.parse(
+        '{"ad_placements":{"full":{}}}',
+      ).settings.onboardingFullCloseButton,
+      OnboardingFullCloseButtonStyle.next,
+    );
+  });
+
   test('key groups allow their supported formats', () {
     final allowed = <AdConfigType, Set<AdConfigFormat>>{
       AdConfigType.splash: {
