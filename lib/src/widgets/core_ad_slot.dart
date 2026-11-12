@@ -26,6 +26,8 @@ class CoreAdSlot extends StatefulWidget {
     this.expanded,
     this.closeButton,
     this.onCollapsed,
+    this.safeAreaTop = false,
+    this.safeAreaBottom = true,
   });
 
   final AdScenarioController controller;
@@ -44,6 +46,12 @@ class CoreAdSlot extends StatefulWidget {
   final bool? expanded;
   final Widget? closeButton;
   final VoidCallback? onCollapsed;
+
+  /// Whether to avoid the top system inset around the inline ad.
+  final bool safeAreaTop;
+
+  /// Whether to avoid the bottom system inset around the inline ad.
+  final bool safeAreaBottom;
 
   @override
   State<CoreAdSlot> createState() => _CoreAdSlotState();
@@ -85,9 +93,8 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
       if (selected == null || !_isInlineNative(selected)) {
         return const SizedBox.shrink();
       }
-      return KeyedSubtree(
-        key: ValueKey(widget.controller.revision),
-        child: _singleFormatAd(selected, MediaQuery.sizeOf(context)),
+      return _withSafeArea(
+        _singleFormatAd(selected, MediaQuery.sizeOf(context)),
       );
     }
     if (!_canRenderInline(plan)) {
@@ -126,8 +133,14 @@ class _CoreAdSlotState extends State<CoreAdSlot> {
       ),
       null => _singleFormatAd(plan.steps.single, screenSize),
     };
-    return KeyedSubtree(key: ValueKey(widget.controller.revision), child: ad);
+    return _withSafeArea(ad);
   }
+
+  Widget _withSafeArea(Widget ad) => SafeArea(
+    top: widget.safeAreaTop,
+    bottom: widget.safeAreaBottom,
+    child: KeyedSubtree(key: ValueKey(widget.controller.revision), child: ad),
+  );
 
   Widget _singleFormatAd(AdScenarioStep step, Size screenSize) {
     return switch (step.placement.type) {

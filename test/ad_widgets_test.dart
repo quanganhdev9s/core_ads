@@ -507,6 +507,54 @@ void main() {
     );
   });
 
+  testWidgets('language slot loads second ID only on first selection', (
+    tester,
+  ) async {
+    final repository = _FakeAdsRepository();
+    final controller = AdScenarioController(
+      initialScript: AdScript.parse('''
+{"ad_placements":{"full":{"native_language":{"template":"LanguageStart1"}}},
+ "ad_ids":{"native_language":["first"],"native_language_2":["second"]}}
+'''),
+      resolveAdUnitIds: (name, type) => [name],
+      buildAdsConfig: (ids) =>
+          AdsConfig(environment: AdsEnvironment.test, adUnitIds: ids),
+      initializeAds: (config) =>
+          CoreAds.initialize(config, repository: repository),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialize();
+
+    Widget page(bool selected) => MaterialApp(
+      home: Scaffold(
+        body: CoreAdSlot(
+          controller: controller,
+          placementKey: selected ? 'native_language_2' : 'native_language',
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(page(false));
+    await tester.pump();
+    expect(repository.nativeLoadCount, 1);
+    expect(
+      tester.widget<AdsNative>(find.byType(AdsNative)).placement.key,
+      'native_language.native',
+    );
+
+    await tester.pumpWidget(page(true));
+    await tester.pump();
+    expect(repository.nativeLoadCount, 2);
+    expect(
+      tester.widget<AdsNative>(find.byType(AdsNative)).placement.key,
+      'native_language_2.native',
+    );
+
+    await tester.pumpWidget(page(true));
+    await tester.pump();
+    expect(repository.nativeLoadCount, 2);
+  });
+
   testWidgets('full-screen native close and refresh timers start on display', (
     tester,
   ) async {

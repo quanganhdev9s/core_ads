@@ -262,6 +262,10 @@ uses `AdsBanner`; `banner_collapsible` requests an AdMob collapsible banner;
 collapsed layout uses the same placement. The slot rebuilds after a successful
 script update. Fullscreen plans belong in `showFullscreenAds`.
 
+`CoreAdSlot` wraps an enabled inline ad in `SafeArea` with `top: false` and
+`bottom: true` by default. Set `safeAreaTop` or `safeAreaBottom` on the slot to
+override either inset.
+
 The slot takes its default native height from the selected factory. Pass
 `nativeHeight` or `collapsedNativeHeight` only when the screen needs an
 override. Native loading uses a template-shaped shimmer: compact icon and CTA

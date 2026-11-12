@@ -191,21 +191,27 @@ final class AdScript {
           placement['enable'] = branches.$1;
           placement['selected_branches'] = branches.$2.keys.toList();
           for (final unit in branches.$2.entries) {
-            final unitIds = ids[unit.value];
-            final list = unitIds is List
-                ? unitIds
-                      .whereType<String>()
-                      .where((id) => id.trim().isNotEmpty)
-                      .toList()
-                : <String>[];
-            placement[unit.key] = useTestIds || list.isEmpty
-                ? <String, Object?>{'name1': unit.value}
-                : <String, Object?>{
-                    for (var i = 0; i < list.length; i++) 'id${i + 1}': list[i],
-                  };
+            placement[unit.key] = _unitFromIds(
+              ids[unit.value],
+              unit.value,
+              useTestIds: useTestIds,
+            );
           }
         }
         result[key] = placement;
+        if (key == 'native_language' &&
+            !selected.containsKey('native_language_2') &&
+            ids.containsKey('native_language_2')) {
+          result['native_language_2'] = {
+            ...placement,
+            if (enabled && scenario != AdScriptScenario.off)
+              'native': _unitFromIds(
+                ids['native_language_2'],
+                'native_language_2',
+                useTestIds: useTestIds,
+              ),
+          };
+        }
       } on FormatException catch (error) {
         logAdScriptError(key, error.message);
         result[key] = {'enable': 0};
@@ -230,6 +236,24 @@ final class AdScript {
       };
     }
     return result;
+  }
+
+  static Map<String, Object?> _unitFromIds(
+    Object? unitIds,
+    String name, {
+    required bool useTestIds,
+  }) {
+    final list = unitIds is List
+        ? unitIds
+              .whereType<String>()
+              .where((id) => id.trim().isNotEmpty)
+              .toList()
+        : <String>[];
+    return useTestIds || list.isEmpty
+        ? <String, Object?>{'name1': name}
+        : <String, Object?>{
+            for (var i = 0; i < list.length; i++) 'id${i + 1}': list[i],
+          };
   }
 
   static (int, Map<String, String>) _branches(

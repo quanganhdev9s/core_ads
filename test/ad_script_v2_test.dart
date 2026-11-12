@@ -175,6 +175,26 @@ void main() {
     );
   });
 
+  test('one language config creates two native placement keys', () {
+    const source = '''{
+      "ad_placements":{"full":{"native_language":{"template":"LanguageStart1"}}},
+      "ad_ids":{
+        "native_language":["first-unit"],
+        "native_language_2":["second-unit"]
+      }
+    }''';
+    final scenarios = coordinator(AdScript.parse(source));
+    final first = scenarios.resolve('native_language').native;
+    final second = scenarios.resolve('native_language_2').native;
+
+    expect(first?.ids, ['first-unit']);
+    expect(second?.ids, ['second-unit']);
+    expect(first?.placement.key, 'native_language.native');
+    expect(second?.placement.key, 'native_language_2.native');
+    expect(first?.placement.nativeFactoryId, 'LanguageStart1');
+    expect(second?.placement.nativeFactoryId, 'LanguageStart1');
+  });
+
   test(
     'custom style accepts every color and dimension in the templates tab',
     () {
