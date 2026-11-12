@@ -469,7 +469,14 @@ void main() {
         "native_home_feed":{"template":"missing","enable":true}
       }},
       "ad_ids":{"native_splash":["native-id"],"native_home_feed":["feed-id"]},
-      "ad_templates":{"dark_card":{"base":"Big1","card_bg":"#1E1E1E"}}
+      "ad_templates":{"dark_card":{
+        "base":"Big1",
+        "cta_bg":"#FFC107",
+        "cta_text":"#000000",
+        "card_bg":"#1E1E1E",
+        "title_color":"#FFFFFF",
+        "body_color":"#BBBBBB"
+      }}
     }''';
     final scenarios = coordinator(AdScript.parse(source));
     expect(
@@ -478,7 +485,13 @@ void main() {
     );
     expect(
       scenarios.resolve('native_splash').native!.placement.nativeStyle!.values,
-      containsPair('card_bg', '#1E1E1E'),
+      {
+        'cta_bg': '#FFC107',
+        'cta_text': '#000000',
+        'card_bg': '#1E1E1E',
+        'title_color': '#FFFFFF',
+        'body_color': '#BBBBBB',
+      },
     );
     expect(scenarios.resolve('native_home_feed').isEnabled, isFalse);
   });
